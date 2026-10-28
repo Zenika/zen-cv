@@ -3,7 +3,7 @@
     "firstname": "Raphaël",
     "name": "Grand",
     "title": "Développeur Fullstack",
-    "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit,\n\nsed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
     "links": [
       {
         "github": "http://",
@@ -39,7 +39,11 @@
       "TDD (Test Driven Development)",
       "BDD (Behavior Driven Development)"
     ],
-    "trainer": ["Formateur NodeJS", "Formateur VueJS", "Formateur Javascript"],
+    "trainer": [
+      "Formateur NodeJS",
+      "Formateur VueJS",
+      "Formateur Javascript"
+    ],
     "experiences": [
       {
         "name": "Invivo Digital Factory",
@@ -242,6 +246,27 @@
         ]
       },
       {
+        "name": "Sectronic",
+        "position": "Lead tech front-end",
+        "period": "octobre - décembre 2021",
+        "context": "Développement d'un outil de communication avec tablettes et panneaux d'affichage connectés",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Mise en place de l'architecture front et des choix techniques.",
+              "Création des maquettes de POC et intégration frontend en collaboration avec l'équipe IOT."
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Vue.js, Javascript ES6, AWS, Gitlab"
+          }
+        ]
+      },
+      {
         "name": "ACEM",
         "position": "Lead tech front-end",
         "period": "janvier 2021 - janvier 2022",
@@ -262,27 +287,6 @@
           {
             "name": "Environnement technique",
             "value": "Vue.js, Javascript ES6, Cypress, Gitlab"
-          }
-        ]
-      },
-      {
-        "name": "Sectronic",
-        "position": "Lead tech front-end",
-        "period": "octobre - décembre 2021",
-        "context": "Développement d'un outil de communication avec tablettes et panneaux d'affichage connectés",
-        "realisations": [
-          {
-            "type": "list",
-            "description": [
-              "Mise en place de l'architecture front et des choix techniques.",
-              "Création des maquettes de POC et intégration frontend en collaboration avec l'équipe IOT."
-            ]
-          }
-        ],
-        "technicalEnvironment": [
-          {
-            "name": "Environnement technique",
-            "value": "Vue.js, Javascript ES6, AWS, Gitlab"
           }
         ]
       },
@@ -475,7 +479,10 @@
       "TDD (Test Driven Development)",
       "Architecture hexagonale"
     ],
-    "trainer": ["Formatrice Spring Boot", "Formatrice Kubernetes"],
+    "trainer": [
+      "Formatrice Spring Boot",
+      "Formatrice Kubernetes"
+    ],
     "experiences": [
       {
         "name": "Banque Horizon",
