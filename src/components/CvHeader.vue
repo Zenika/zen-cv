@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PencilIcon } from '@lucide/vue'
 import { RouterLink } from 'vue-router'
 import InlineEdit from './InlineEdit.vue'
 import type { SaveCv } from '../composables/useCv'
@@ -29,7 +30,7 @@ defineProps<{ cv: UserData; save: SaveCv }>()
             aria-label="Modifier le titre"
             @click="edit"
           >
-            ✎
+            <PencilIcon :size="14" />
           </button>
         </InlineEdit>
       </div>

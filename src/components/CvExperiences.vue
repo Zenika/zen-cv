@@ -67,7 +67,7 @@ async function remove() {
   <section class="experience-list">
     <div class="row">
       <h2 class="section-title">Dernières expériences</h2>
-      <hr class="divider divider--flush" />
+      <hr class="divider" />
     </div>
 
     <ExperienceForm v-if="isAdding" @save="add" @cancel="isAdding = false" />
