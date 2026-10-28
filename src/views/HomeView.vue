@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { errorMessage, getCvs } from '../service/cvApi'
 import type { CvSummary } from '../types'
 
 const cvs = ref<CvSummary[] | null>(null)
@@ -8,21 +9,10 @@ const loadError = ref<string | null>(null)
 
 async function loadCvs() {
   loadError.value = null
-  let response: Response
   try {
-    response = await fetch('/api/cvs')
-  } catch {
-    loadError.value = 'le serveur est injoignable.'
-    return
-  }
-  if (!response.ok) {
-    loadError.value = (await response.text()) || `erreur ${response.status}.`
-    return
-  }
-  try {
-    cvs.value = await response.json()
-  } catch {
-    loadError.value = 'les données reçues ne sont pas un JSON valide.'
+    cvs.value = await getCvs()
+  } catch (error) {
+    loadError.value = errorMessage(error)
   }
 }
 
@@ -36,7 +26,9 @@ onMounted(loadCvs)
 
       <div v-if="loadError" class="cv-load-error" role="alert">
         <p><strong>La liste des CV n'a pas pu être chargée :</strong> {{ loadError }}</p>
-        <button type="button" @click="loadCvs">Réessayer</button>
+        <button type="button" class="cv-button cv-button-primary" @click="loadCvs">
+          Réessayer
+        </button>
       </div>
 
       <ul v-else-if="cvs" class="home-list">

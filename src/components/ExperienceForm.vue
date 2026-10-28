@@ -114,8 +114,8 @@ function save() {
       </fieldset>
 
       <div class="cv-experience-form-actions">
-        <button type="button" @click="emit('cancel')">Annuler</button>
-        <button>Enregistrer</button>
+        <button type="button" class="cv-button" @click="emit('cancel')">Annuler</button>
+        <button class="cv-button cv-button-primary">Enregistrer</button>
       </div>
     </div>
   </form>
@@ -135,7 +135,7 @@ function save() {
 
 .cv-experience-form input,
 .cv-experience-form textarea,
-.cv-experience-form button {
+.cv-experience-form fieldset button {
   font: inherit;
 }
 
@@ -181,21 +181,6 @@ function save() {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.cv-experience-form-actions button {
-  padding: 8px 16px;
-  border: 1px solid var(--cv-red);
-  border-radius: 4px;
-  background: #fff;
-  color: var(--cv-red);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.cv-experience-form-actions button:last-child {
-  background: var(--cv-red);
-  color: #fff;
 }
 
 @media print {
