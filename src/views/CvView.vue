@@ -94,6 +94,36 @@ async function addExperience(experience: Experience) {
   if (added) isAddingExperience.value = false
 }
 
+const editedTitle = ref<string | null>(null)
+const titleInput = useTemplateRef('titleInput')
+
+async function editTitle() {
+  editedTitle.value = userData.value?.title ?? ''
+  await nextTick()
+  titleInput.value?.select()
+}
+
+async function saveTitle() {
+  if (!userData.value || editedTitle.value === null) return
+  const saved = await saveUserData({ ...userData.value, title: editedTitle.value.trim() })
+  if (saved) editedTitle.value = null
+}
+
+const editedBio = ref<string | null>(null)
+const bioInput = useTemplateRef('bioInput')
+
+async function editBio() {
+  editedBio.value = userData.value?.bio ?? ''
+  await nextTick()
+  bioInput.value?.focus()
+}
+
+async function saveBio() {
+  if (!userData.value || editedBio.value === null) return
+  const saved = await saveUserData({ ...userData.value, bio: editedBio.value.trim() })
+  if (saved) editedBio.value = null
+}
+
 const editedExperience = ref<Experience | null>(null)
 
 async function updateExperience(experience: Experience) {
@@ -164,7 +194,33 @@ onMounted(loadUserData)
           {{ userData.firstname }}
           <span class="cv-lastname">{{ userData.name }}</span>
         </h1>
-        <p class="cv-title">{{ userData.title }}</p>
+        <form
+          v-if="editedTitle !== null"
+          class="cv-title-form"
+          @submit.prevent="saveTitle"
+          @keydown.esc="editedTitle = null"
+        >
+          <input
+            ref="titleInput"
+            v-model="editedTitle"
+            class="cv-title"
+            aria-label="Titre du CV"
+            required
+          />
+          <button type="button" @click="editedTitle = null">Annuler</button>
+          <button>Enregistrer</button>
+        </form>
+        <p v-else class="cv-title">
+          {{ userData.title }}
+          <button
+            type="button"
+            class="cv-title-edit"
+            aria-label="Modifier le titre"
+            @click="editTitle"
+          >
+            ✎
+          </button>
+        </p>
         <ul class="cv-links">
           <template v-for="links in userData.links">
             <li v-for="(url, name) in links" :key="name">
@@ -176,7 +232,26 @@ onMounted(loadUserData)
     </header>
 
     <div class="cv-intro">
-      <p class="cv-bio cv-card">{{ userData.bio }}</p>
+      <form
+        v-if="editedBio !== null"
+        class="cv-card cv-bio-form"
+        @submit.prevent="saveBio"
+        @keydown.esc="editedBio = null"
+        @keydown.ctrl.enter.prevent="saveBio"
+        @keydown.meta.enter.prevent="saveBio"
+      >
+        <textarea ref="bioInput" v-model="editedBio" rows="8" aria-label="Bio" required />
+        <div class="cv-bio-form-actions">
+          <button type="button" @click="editedBio = null">Annuler</button>
+          <button>Enregistrer</button>
+        </div>
+      </form>
+      <div v-else class="cv-card cv-bio-card">
+        <button type="button" class="cv-bio-edit" aria-label="Modifier la bio" @click="editBio">
+          ✎
+        </button>
+        <p class="cv-bio">{{ userData.bio }}</p>
+      </div>
     </div>
 
     <div class="cv-band">
@@ -443,6 +518,11 @@ onMounted(loadUserData)
   padding-block: 20px;
 }
 
+.cv-header > div {
+  flex: 1;
+  min-width: 0;
+}
+
 .cv h1 {
   font-size: 32px;
   line-height: 1.1;
@@ -457,6 +537,57 @@ onMounted(loadUserData)
   font-family: 'Montserrat', sans-serif;
   font-size: 18px;
   margin-top: 6px !important;
+}
+
+.cv-title-edit,
+.cv-bio-edit {
+  padding: 2px 6px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.cv-title-edit:hover,
+.cv-bio-edit:hover {
+  background: var(--cv-grey);
+}
+
+.cv-title-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cv-title-form input {
+  flex: 0 1 360px;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.cv-title-form button,
+.cv-bio-form button {
+  padding: 6px 14px;
+  border: 1px solid var(--cv-red);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--cv-red);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cv-title-form button:last-child,
+.cv-bio-form button:last-child {
+  background: var(--cv-red);
+  color: #fff;
 }
 
 .cv-links {
@@ -505,6 +636,36 @@ onMounted(loadUserData)
 .cv-bio {
   columns: 2;
   column-gap: 32px;
+  white-space: pre-line;
+}
+
+.cv-bio-card {
+  position: relative;
+}
+
+.cv-bio-edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.cv-bio-form {
+  display: grid;
+  gap: 12px;
+}
+
+.cv-bio-form textarea {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font: inherit;
+  resize: vertical;
+}
+
+.cv-bio-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .cv-row {
@@ -851,6 +1012,8 @@ onMounted(loadUserData)
 
 @media print {
   .cv-back,
+  .cv-title-edit,
+  .cv-bio-edit,
   .cv-export,
   .cv-add,
   .cv-experience-actions,
