@@ -30,6 +30,27 @@ body {
   }
 }
 
+.row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0 24px;
+  align-items: start;
+  margin-bottom: 32px;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+
+  &__content {
+    grid-column: 2;
+    margin-top: 16px;
+
+    @include mobile {
+      grid-column: auto;
+    }
+  }
+}
+
 .card {
   padding: 20px 24px;
   background: #fff;
@@ -43,44 +64,29 @@ body {
   }
 
   &--row {
-    padding-left: 0;
+    grid-template-columns: 176px 1fr;
 
     @include mobile {
-      padding: 16px;
+      grid-template-columns: 1fr;
     }
   }
 
   @media print {
-    &,
+    padding: 0;
+    background: none;
+    box-shadow: none;
+
     &--row {
-      padding: 0;
-      background: none;
-      box-shadow: none;
+      grid-template-columns: 200px 1fr;
     }
-  }
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 0 24px;
-  align-items: start;
-  margin-bottom: 32px;
-
-  @include mobile {
-    grid-template-columns: 1fr;
   }
 }
 
 .divider {
   align-self: center;
-  margin: 0 0 16px;
+  margin: 0;
   border: none;
   border-top: 1px solid $red;
-
-  &--flush {
-    margin: 0;
-  }
 }
 
 .section-title {
@@ -123,6 +129,9 @@ body {
 }
 
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   padding: 0;

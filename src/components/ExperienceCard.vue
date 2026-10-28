@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PencilIcon, Trash2Icon } from '@lucide/vue'
 import type { Experience } from '../types'
 
 defineProps<{ experience: Experience }>()
@@ -15,7 +16,7 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
         :aria-label="`Modifier l'expérience ${experience.name}`"
         @click="emit('edit')"
       >
-        ✎
+        <PencilIcon :size="16" />
       </button>
       <button
         type="button"
@@ -23,7 +24,7 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
         :aria-label="`Supprimer l'expérience ${experience.name}`"
         @click="emit('delete')"
       >
-        ×
+        <Trash2Icon :size="16" />
       </button>
     </div>
     <h3 class="experience-card__company">{{ experience.name }}</h3>

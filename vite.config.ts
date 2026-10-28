@@ -52,7 +52,9 @@ function bddApi(): Plugin {
             format: 'A4',
             printBackground: true,
             displayHeaderFooter: true,
-            headerTemplate: '<span></span>',
+            // Repeats the .cv red top border on every page
+            headerTemplate:
+              '<div style="position: absolute; top: 0; right: 0; left: 0; height: 10px; background: #ee2238; -webkit-print-color-adjust: exact;"></div>',
             footerTemplate: `<div style="width: 100%; text-align: center;"><img src="data:image/png;base64,${logo}" style="height: 10mm;" /></div>`,
           })
           res.setHeader('Content-Type', 'application/pdf')

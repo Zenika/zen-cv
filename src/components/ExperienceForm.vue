@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Trash2Icon } from '@lucide/vue'
 import { ref } from 'vue'
 import type { Experience, Realisation } from '../types'
 
@@ -116,7 +117,7 @@ function save() {
             aria-label="Supprimer la réalisation"
             @click="form.realisations.splice(realisationIndex, 1)"
           >
-            ×
+            <Trash2Icon :size="16" />
           </button>
         </div>
         <button
@@ -147,7 +148,7 @@ function save() {
             aria-label="Supprimer l'environnement"
             @click="form.technicalEnvironment.splice(techIndex, 1)"
           >
-            ×
+            <Trash2Icon :size="16" />
           </button>
         </div>
         <button
@@ -223,6 +224,9 @@ function save() {
   }
 
   &__small-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     justify-self: start;
     padding: 6px 12px;
     font: inherit;

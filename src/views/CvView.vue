@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PencilIcon, XIcon } from '@lucide/vue'
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import CvExperiences from '../components/CvExperiences.vue'
@@ -44,7 +45,7 @@ onMounted(load)
             aria-label="Modifier la bio"
             @click="edit"
           >
-            ✎
+            <PencilIcon :size="14" />
           </button>
           <p class="cv-page__bio-text">{{ cv.bio }}</p>
         </InlineEdit>
@@ -61,10 +62,10 @@ onMounted(load)
         @clear-save-error="saveError = null"
       />
 
-      <section class="row card card--row">
+      <section class="row card card--row cv-page__section">
         <h2 class="section-title">Formation</h2>
-        <div>
-          <hr class="divider" />
+        <hr class="divider" />
+        <div class="row__content">
           <p v-for="education in cv.education" :key="education.title">
             {{ education.period }} <strong>{{ education.title }}</strong
             >, {{ education.school }}.
@@ -72,10 +73,10 @@ onMounted(load)
         </div>
       </section>
 
-      <section class="row card card--row">
+      <section class="row card card--row cv-page__section">
         <h2 class="section-title">Langues</h2>
-        <div>
-          <hr class="divider" />
+        <hr class="divider" />
+        <div class="row__content">
           <p>
             <template v-for="(language, index) in cv.languages" :key="language.name">
               <template v-if="index">, </template>
@@ -96,7 +97,7 @@ onMounted(load)
           <strong>L'enregistrement a échoué :</strong> {{ saveError }}
         </p>
         <button type="button" class="icon-button" aria-label="Fermer" @click="saveError = null">
-          ×
+          <XIcon :size="18" />
         </button>
       </div>
       <div v-if="exportError" class="cv-page__error" role="alert">
@@ -104,7 +105,7 @@ onMounted(load)
           <strong>L'export PDF a échoué :</strong> {{ exportError }}
         </p>
         <button type="button" class="icon-button" aria-label="Fermer" @click="exportError = null">
-          ×
+          <XIcon :size="18" />
         </button>
       </div>
     </div>
@@ -165,6 +166,12 @@ onMounted(load)
 
     @media print {
       padding-bottom: 0;
+    }
+  }
+
+  &__section {
+    @media print {
+      break-inside: avoid;
     }
   }
 
