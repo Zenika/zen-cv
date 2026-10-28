@@ -34,13 +34,6 @@ defineProps<{ cv: UserData; save: SaveCv }>()
           </button>
         </InlineEdit>
       </div>
-      <ul class="cv-header__links">
-        <template v-for="links in cv.links">
-          <li v-for="(url, name) in links" :key="name">
-            <a :href="url" class="cv-header__link">{{ name }}</a>
-          </li>
-        </template>
-      </ul>
     </div>
   </header>
 </template>
@@ -78,18 +71,6 @@ defineProps<{ cv: UserData; save: SaveCv }>()
     margin-top: 6px;
     font-family: $font-heading;
     font-size: 18px;
-  }
-
-  &__links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    margin-top: 8px;
-    font-size: 13px;
-  }
-
-  &__link {
-    color: $red;
   }
 }
 </style>
