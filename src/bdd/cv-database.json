@@ -1,0 +1,591 @@
+{
+  "raphael-grand": {
+    "firstname": "Raphaël",
+    "name": "Grand",
+    "title": "Développeur Fullstack",
+    "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    "links": [
+      {
+        "github": "http://",
+        "linkedin": "http://",
+        "twitter/x/etcc": "http://"
+      }
+    ],
+    "expertise": [
+      {
+        "name": "Vue",
+        "level": "Expert"
+      },
+      {
+        "name": "NodeJS",
+        "level": "Avancé"
+      },
+      {
+        "name": "React",
+        "level": "Intermédiaire"
+      },
+      {
+        "name": "TypeScript & JavaScript",
+        "level": "Expert"
+      },
+      {
+        "name": "Gitlab & Github & Bitbucket",
+        "level": "Expert"
+      }
+    ],
+    "methodologies": [
+      "Design et UX",
+      "Accessibilité",
+      "TDD (Test Driven Development)",
+      "BDD (Behavior Driven Development)"
+    ],
+    "trainer": ["Formateur NodeJS", "Formateur VueJS", "Formateur Javascript"],
+    "experiences": [
+      {
+        "name": "Invivo Digital Factory",
+        "position": "Développeur Javascript fullstack",
+        "period": "depuis mars 2024",
+        "team": "équipe de 6 personnes",
+        "context": "Feature team en méthodologie agile (sprints de 2 semaines, program increment SAFe de 3 mois) sur le contexte B2B et retail (Jardiland & Gammvert), développement, maintenance et évolutions du périmètre Offres (back et front) ainsi qu’interventions sur les briques transverses.",
+        "realisations": [
+          {
+            "title": "Migration technique",
+            "type": "text",
+            "description": "passage de Vue2 (option API) à Vue3 (composition API) en TypeScript sur les front B2B"
+          },
+          {
+            "title": "Conception & Développement",
+            "type": "list",
+            "description": [
+              "Nouvelles features sur les front et les différentes API B2B et Retail du périmètres Offres",
+              "Refactorisation du legacy sur les API (mise en place initiale datant de 6 ans)",
+              "Mise en place et conception de plusieurs SDK",
+              "Participation aux choix d’architecture et mise en place des outils de bonnes pratiques",
+              "Sensibilisation des équipes à l’accessibilité"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Frontend",
+            "value": "Nuxt.js, Vue.js, TypeScript"
+          },
+          {
+            "name": "Backend",
+            "value": "Node.js, HAPI.js, TypeScript"
+          },
+          {
+            "name": "Base de données",
+            "value": "MongoDB, PostgreSQL"
+          },
+          {
+            "name": "Infrastructure",
+            "value": "Kubernetes (K8s), Kibana, Ansible, Prometheus, GitLab"
+          }
+        ]
+      },
+      {
+        "name": "Nellie Bly",
+        "position": "Développeur Javascript fullstack",
+        "period": "novembre - décembre 2023",
+        "context": "Développement d’une application journalistique avec sélection de sources, génération d’articles sur un thème donné et génération d’images.",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Création d’un dashboard de saisie et de gestion des sources",
+              "Communication avec les API de ChatGPT",
+              "Traitement des réponses et mise en forme"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Vue 3, NodeJS, ChatGPT"
+          }
+        ]
+      },
+      {
+        "name": "Paris en ligne",
+        "position": "Développeur Javascript fullstack",
+        "period": "octobre 2023 - décembre 2023",
+        "context": "Participation au développement de plusieurs POC autour de solutions intégrant l’IA pour un site de paris sportifs en ligne.",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Création d’un chatbot, interface graphique et intégration. Mise en place d’une API back pour gérer le dialogue entre front et IA",
+              "Création d’un outil de gestion de tournées. Mapping, données de géolocalisation et calcul de trajets"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Vue 3, NodeJS, Github, Dialogflow, GCP"
+          }
+        ]
+      },
+      {
+        "name": "MyScript",
+        "position": "Développeur Javascript Fullstack",
+        "period": "avril - octobre 2022",
+        "context": "Transition du site portail développeur d’une ancienne stack php Laravel vers un back en NodeJS et un front en Vue3. Mise en place d’une CI sur les deux stacks, tests unitaires et end to end.",
+        "realisations": [
+          {
+            "title": "Backend",
+            "type": "list",
+            "description": [
+              "Mise en place d’une API pour servir le front",
+              "Récupération de tokens SSO et transformation de fichiers de reconnaissance avec les SDK MyScript",
+              "Inscription de nouveaux utilisateurs, créations de certificats et de clés d’application MyScript",
+              "Envoi de mails",
+              "Initialisation des outils de test et mentoring des équipes"
+            ]
+          },
+          {
+            "title": "Frontend",
+            "type": "list",
+            "description": [
+              "Intégration de pages statiques dans le projet Vue et lien avec le vue routeur",
+              "Récupération de données métiers et data via microservices",
+              "Création du projet statique ouvert aux contributeurs marketing avec mise en place d’un framework scss et linter",
+              "Documentation de contribution",
+              "Initialisation des outils de test et mentoring aux équipes"
+            ]
+          },
+          {
+            "title": "Conseil",
+            "type": "text",
+            "description": "Expertise et conseils sur les choix de technologies, d’architectures et de bonnes pratiques."
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "NodeJS, Vue.js, Nuxt, Docker, Cypress, Jest, Bitbucket, AWS"
+          }
+        ]
+      },
+      {
+        "name": "Djust",
+        "position": "Développeur lead dev Javascript Fullstack",
+        "period": "février 2023 - septembre 2023",
+        "context": "Accompagnement des équipes de développeurs et alternants autour d’une solution e-commerce B2B.",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Participation à la mise en place d’un SDK pour faciliter les futurs développements clients et prestataires",
+              "Sensibilisation des équipes aux bonnes pratiques et clean code avec Typescript",
+              "Développement de nouvelles fonctionnalités sur la partie “socle” de la solution",
+              "Développement de fonctionnalités spécifiques clients"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Vue 2, Nuxt 2, NodeJS, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Richemont",
+        "position": "Expertise",
+        "period": "mars - avril 2022",
+        "context": "Développement d’un POC Cypress afin de mettre en place une politique de test end-to-end dans la solution progicielle de catalogue du client.",
+        "realisations": [],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Cypress, Windchill, Bitbucket"
+          }
+        ]
+      },
+      {
+        "name": "Kiplin",
+        "position": "Expertise test e2e",
+        "period": "mars 2022",
+        "context": "Aide à la mise en place du framework de test javascript Cypress et initiation au fonctionnement de la solution auprès des équipes de développement.",
+        "realisations": [],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Cypress, Vue.js, Symfony"
+          }
+        ]
+      },
+      {
+        "name": "Camif",
+        "position": "Développeur Javascript Fullstack senior",
+        "period": "mars 2021 - janvier 2022",
+        "context": "Refonte du site e-commerce en Sylius",
+        "realisations": [
+          {
+            "title": "Mise en place de l'architecture front",
+            "type": "list",
+            "description": [
+              "Choix techniques et architecture des composants",
+              "Encadrement des équipes (3 développeur·euse·s)",
+              "Relecture, conseils et corrections sur le code",
+              "Participations aux réunions de projets et lead"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Javascript ES6, Twig, Symfony, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "ACEM",
+        "position": "Lead tech front-end",
+        "period": "janvier 2021 - janvier 2022",
+        "context": "Développement d'un outil SPA de gestion de tournées de livraisons",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Mise en place de l'architecture front, et des composants génériques",
+              "Choix techniques",
+              "Encadrement des équipes (5 développeur·euse·s)",
+              "Communication entre les composants JS et Mercure pour de la mise à jour en temps réelle",
+              "Mise en place du framework de test Cypress, écriture des scénarios et accompagnement des développeur·euse·s."
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Vue.js, Javascript ES6, Cypress, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Sectronic",
+        "position": "Lead tech front-end",
+        "period": "octobre - décembre 2021",
+        "context": "Développement d'un outil de communication avec tablettes et panneaux d'affichage connectés",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Mise en place de l'architecture front et des choix techniques.",
+              "Création des maquettes de POC et intégration frontend en collaboration avec l'équipe IOT."
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Vue.js, Javascript ES6, AWS, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Makeen",
+        "position": "Lead tech front-end",
+        "period": "août - octobre 2021",
+        "context": "Affichages de statistiques d'outils de production",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Développements de plugins spécifiques pour la solution Grafana",
+              "Mise en place des logiques de calcul et des styles des visualisation de graphiques."
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Grafana, React, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Even Distribution",
+        "position": "Développeur front-end",
+        "period": "mars 2020 - juillet 2021",
+        "context": "Refonte de la plateforme B2B Atlanterra",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Intégration et développement de modules front",
+              "Gestion d'une équipe de développeurs frontend (4 développeur·euse·s)"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Magento 2, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Exalis",
+        "position": "Développeur front-end",
+        "period": "2020",
+        "context": "Refonte graphique du site Outils Santé",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Développement et intégration des nouvelles maquettes",
+              "Mise en place de nouvelles solutions d'affichage de graphiques",
+              "Encadrement et support de l'équipe frontend (3 développeur·euse·s)"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Javascript ES6, Symfony, Twig, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Nantes Métropole",
+        "position": "Développeur front-end",
+        "period": "2019 - 2020",
+        "context": "Refonte du site Nantes Métropole / Nantes fr",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Développement et mise en place d'un guide de style et d'éléments graphiques réutilisables",
+              "Développement de SPAs (Agenda des événements, Annuaire des associations, etc...)",
+              "Encadrement et accompagnement dans la montée en compétences de l'équipe frontend (4 développeur·euse·s)"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "React, Javascript ES6, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Groupe Ferron",
+        "position": "Développeur sénior front-end",
+        "period": "2019",
+        "context": "Refonte du site e-commerce en Sylius Symfony",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Mise en place des normes de développements et de l'architecture front",
+              "Encadrement des équipes frontend (2 développeur·euse·s)"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Sylius, Symfony, Twig, Javascript ES6, Gitlab"
+          }
+        ]
+      },
+      {
+        "name": "Freelance",
+        "position": "Divers",
+        "period": "2010 - 2016",
+        "context": "Graphiste, Infographiste, Web Designer, Illustrateur",
+        "realisations": [
+          {
+            "title": "Chat perché",
+            "type": "text",
+            "description": "Site et magasin de jeux de société, plateaux et jeux en bois : conception du logo et de l’identité visuelle. Conception graphique du site internet."
+          },
+          {
+            "title": "Pro Artigraph",
+            "type": "text",
+            "description": "École de design : initiation au web design et aux standards HTML auprès des étudiants."
+          }
+        ],
+        "technicalEnvironment": []
+      }
+    ],
+    "education": [
+      {
+        "period": "2016 - 2018",
+        "title": "Concepteur Développeur en projets numériques",
+        "school": "IMIE - École de la filière numérique, Nantes"
+      },
+      {
+        "period": "2016",
+        "title": "BTS Communication visuelle",
+        "school": "Pro Artigraph"
+      }
+    ],
+    "languages": [
+      {
+        "name": "Français",
+        "level": "langue maternelle"
+      },
+      {
+        "name": "Anglais",
+        "level": "courant"
+      }
+    ]
+  },
+  "camille-martin": {
+    "firstname": "Camille",
+    "name": "Martin",
+    "title": "Développeuse Backend Java & Cloud",
+    "bio": "Développeuse backend depuis 9 ans, Camille conçoit des API robustes et des architectures cloud pour des systèmes à fort trafic. Attachée à la qualité du code et au partage de connaissances, elle accompagne les équipes sur les bonnes pratiques de test, d'observabilité et de déploiement continu. Elle intervient également comme formatrice sur Spring Boot et Kubernetes.",
+    "links": [
+      {
+        "github": "http://",
+        "linkedin": "http://"
+      }
+    ],
+    "expertise": [
+      {
+        "name": "Java & Kotlin",
+        "level": "Expert"
+      },
+      {
+        "name": "Spring Boot",
+        "level": "Expert"
+      },
+      {
+        "name": "Kubernetes",
+        "level": "Avancé"
+      },
+      {
+        "name": "Google Cloud Platform",
+        "level": "Avancé"
+      },
+      {
+        "name": "Kafka",
+        "level": "Intermédiaire"
+      }
+    ],
+    "methodologies": [
+      "Scrum",
+      "Kanban",
+      "TDD (Test Driven Development)",
+      "Architecture hexagonale"
+    ],
+    "trainer": ["Formatrice Spring Boot", "Formatrice Kubernetes"],
+    "experiences": [
+      {
+        "name": "Banque Horizon",
+        "position": "Lead développeuse backend",
+        "period": "depuis janvier 2023",
+        "team": "équipe de 8 personnes",
+        "context": "Refonte du système de virements instantanés d'une banque en ligne : découpage du monolithe historique en microservices et migration vers le cloud.",
+        "realisations": [
+          {
+            "title": "Architecture",
+            "type": "text",
+            "description": "conception de l'architecture événementielle autour de Kafka et définition des contrats d'API entre les équipes"
+          },
+          {
+            "title": "Développement",
+            "type": "list",
+            "description": [
+              "Développement des services de validation et d'exécution des virements",
+              "Mise en place des tests de contrat entre microservices",
+              "Réduction du temps de traitement moyen d'un virement de 4 s à 600 ms"
+            ]
+          },
+          {
+            "title": "Accompagnement",
+            "type": "text",
+            "description": "mentorat de deux développeurs juniors et animation des revues de code"
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Backend",
+            "value": "Java 21, Spring Boot 3, Kafka"
+          },
+          {
+            "name": "Base de données",
+            "value": "PostgreSQL, Redis"
+          },
+          {
+            "name": "Infrastructure",
+            "value": "Google Cloud Platform, Kubernetes (GKE), Terraform, GitLab CI"
+          }
+        ]
+      },
+      {
+        "name": "TransLogis",
+        "position": "Développeuse backend",
+        "period": "mars 2020 - décembre 2022",
+        "team": "équipe de 5 personnes",
+        "context": "Plateforme de suivi de livraisons en temps réel pour un transporteur national, utilisée par 2 000 chauffeurs et leurs clients professionnels.",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Développement de l'API de suivi des colis et des notifications clients",
+              "Intégration des données GPS des véhicules via des flux MQTT",
+              "Mise en place du monitoring et des alertes avec Prometheus et Grafana",
+              "Migration de l'application de Java 8 à Java 17"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Java 17, Spring Boot, MQTT, MongoDB, Docker, Prometheus, Grafana"
+          }
+        ]
+      },
+      {
+        "name": "Mutuelle Atlantique",
+        "position": "Développeuse Java",
+        "period": "septembre 2017 - février 2020",
+        "context": "Maintenance et évolutions de l'extranet adhérents : consultation des remboursements, devis et gestion des contrats.",
+        "realisations": [
+          {
+            "type": "list",
+            "description": [
+              "Développement de nouvelles fonctionnalités sur le parcours de devis en ligne",
+              "Écriture des tests automatisés et augmentation de la couverture de 35 % à 80 %",
+              "Participation à la mise en conformité RGPD de l'extranet"
+            ]
+          }
+        ],
+        "technicalEnvironment": [
+          {
+            "name": "Environnement technique",
+            "value": "Java 8, Spring, Hibernate, Oracle, Jenkins"
+          }
+        ]
+      }
+    ],
+    "education": [
+      {
+        "period": "2012 - 2017",
+        "title": "Diplôme d'ingénieur en informatique",
+        "school": "École d'ingénieurs fictive, Rennes"
+      }
+    ],
+    "languages": [
+      {
+        "name": "Français",
+        "level": "langue maternelle"
+      },
+      {
+        "name": "Anglais",
+        "level": "courant"
+      },
+      {
+        "name": "Espagnol",
+        "level": "intermédiaire"
+      }
+    ]
+  }
+}
