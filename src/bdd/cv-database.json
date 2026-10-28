@@ -2,15 +2,8 @@
   "raphael-grand": {
     "firstname": "Raphaël",
     "name": "Grand",
-    "title": "Développeur Fullstack",
+    "title": "Développeur Fullstack prout",
     "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit,\n\nsed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    "links": [
-      {
-        "github": "http://",
-        "linkedin": "http://",
-        "twitter/x/etcc": "http://"
-      }
-    ],
     "expertise": [
       {
         "name": "Vue",
@@ -445,12 +438,6 @@
     "name": "Martin",
     "title": "Développeuse Backend Java & Cloud",
     "bio": "Développeuse backend depuis 9 ans, Camille conçoit des API robustes et des architectures cloud pour des systèmes à fort trafic. Attachée à la qualité du code et au partage de connaissances, elle accompagne les équipes sur les bonnes pratiques de test, d'observabilité et de déploiement continu. Elle intervient également comme formatrice sur Spring Boot et Kubernetes.",
-    "links": [
-      {
-        "github": "http://",
-        "linkedin": "http://"
-      }
-    ],
     "expertise": [
       {
         "name": "Java & Kotlin",
