@@ -6,9 +6,26 @@ import type { Experience, UserData } from './types'
 
 const userData = ref<UserData | null>(null)
 
+const loadError = ref<string | null>(null)
+
 async function loadUserData() {
-  const response = await fetch('/api/raphael')
-  userData.value = await response.json()
+  loadError.value = null
+  let response: Response
+  try {
+    response = await fetch('/api/raphael')
+  } catch {
+    loadError.value = 'le serveur est injoignable.'
+    return
+  }
+  if (!response.ok) {
+    loadError.value = (await response.text()) || `erreur ${response.status}.`
+    return
+  }
+  try {
+    userData.value = await response.json()
+  } catch {
+    loadError.value = 'les données reçues ne sont pas un JSON valide.'
+  }
 }
 
 const saveError = ref<string | null>(null)
@@ -32,6 +49,35 @@ async function saveUserData(data: UserData) {
   saveError.value = null
   userData.value = data
   return true
+}
+
+const exportError = ref<string | null>(null)
+const isExporting = ref(false)
+
+async function exportPdf() {
+  isExporting.value = true
+  exportError.value = null
+  try {
+    let response: Response
+    try {
+      response = await fetch('/api/cv.pdf')
+    } catch {
+      exportError.value = 'le serveur est injoignable.'
+      return
+    }
+    if (!response.ok) {
+      exportError.value = (await response.text()) || `erreur ${response.status}.`
+      return
+    }
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'cv-raphael-grand.pdf'
+    link.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    isExporting.value = false
+  }
 }
 
 const isAddingExperience = ref(false)
@@ -105,7 +151,9 @@ onMounted(loadUserData)
 
 <template>
   <div class="cv" v-if="userData">
-    <a class="cv-export" href="/api/cv.pdf" download="cv-raphael-grand.pdf">Export PDF</a>
+    <button type="button" class="cv-export" :disabled="isExporting" @click="exportPdf">
+      {{ isExporting ? 'Export en cours…' : 'Export PDF' }}
+    </button>
     <header class="cv-header">
       <div>
         <h1>
@@ -298,9 +346,15 @@ onMounted(loadUserData)
       <img src="/images/zenika.png" alt="Zenika" />
     </footer>
 
-    <div v-if="saveError" class="cv-save-error" role="alert">
-      <p><strong>L'enregistrement a échoué :</strong> {{ saveError }}</p>
-      <button type="button" aria-label="Fermer" @click="saveError = null">×</button>
+    <div class="cv-errors">
+      <div v-if="saveError" class="cv-error" role="alert">
+        <p><strong>L'enregistrement a échoué :</strong> {{ saveError }}</p>
+        <button type="button" aria-label="Fermer" @click="saveError = null">×</button>
+      </div>
+      <div v-if="exportError" class="cv-error" role="alert">
+        <p><strong>L'export PDF a échoué :</strong> {{ exportError }}</p>
+        <button type="button" aria-label="Fermer" @click="exportError = null">×</button>
+      </div>
     </div>
 
     <dialog ref="deleteDialog" class="cv-dialog" @close="onDeleteDialogClose">
@@ -317,6 +371,12 @@ onMounted(loadUserData)
         </div>
       </form>
     </dialog>
+  </div>
+  <div v-else-if="loadError" class="cv" role="alert">
+    <div class="cv-load-error">
+      <p><strong>Le CV n'a pas pu être chargé :</strong> {{ loadError }}</p>
+      <button type="button" @click="loadUserData">Réessayer</button>
+    </div>
   </div>
 </template>
 
@@ -436,7 +496,6 @@ body {
   padding-block: 24px;
 }
 
-/* Bio between the header and the grey band, its text flowing over two columns */
 .cv-intro {
   max-width: 860px;
   margin: 0 auto;
@@ -593,8 +652,15 @@ body {
   border-radius: 4px;
   background: var(--cv-red);
   color: #fff;
+  border: none;
+  font: inherit;
   font-weight: 600;
-  text-decoration: none;
+  cursor: pointer;
+}
+
+.cv-export:disabled {
+  opacity: 0.7;
+  cursor: progress;
 }
 
 .cv-add {
@@ -707,16 +773,38 @@ body {
   color: var(--cv-red);
 }
 
-/* Save error */
-.cv-save-error {
+.cv-load-error {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px var(--cv-gutter);
+}
+
+.cv-load-error button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--cv-red);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cv-errors {
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 10;
+  display: grid;
+  gap: 12px;
+  max-width: 420px;
+}
+
+.cv-error {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  max-width: 420px;
   padding: 12px 12px 12px 16px;
   border-left: 4px solid var(--cv-red);
   border-radius: 4px;
@@ -724,7 +812,13 @@ body {
   box-shadow: 0 4px 24px rgb(0 0 0 / 20%);
 }
 
-.cv-save-error button {
+.cv-error p {
+  max-height: 40vh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.cv-error button {
   padding: 0;
   border: none;
   background: none;
@@ -748,7 +842,7 @@ body {
   .cv-add,
   .cv-experience-actions,
   .cv-dialog,
-  .cv-save-error {
+  .cv-errors {
     display: none;
   }
 
