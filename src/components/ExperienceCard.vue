@@ -93,6 +93,7 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .experience-card {
   position: relative;
 
@@ -145,8 +146,8 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
     padding-left: 40px;
 
     &--bullets {
-      list-style: disc;
       margin-bottom: 0;
+      list-style: disc;
     }
 
     &--dashes {
@@ -162,9 +163,9 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
     position: relative;
 
     &::before {
-      content: '-';
       position: absolute;
       left: -24px;
+      content: '-';
     }
   }
 

@@ -46,13 +46,14 @@ defineProps<{ cv: UserData; save: SaveCv }>()
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .cv-header {
   display: flex;
-  align-items: flex-start;
   gap: 24px;
+  align-items: flex-start;
   max-width: $content-width;
-  margin: 0 auto;
   padding: 20px $gutter;
+  margin: 0 auto;
 
   &__content {
     flex: 1;

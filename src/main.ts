@@ -1,4 +1,7 @@
 import { createApp } from 'vue'
+import '@fontsource-variable/montserrat'
+import '@fontsource-variable/open-sans'
+import '@fontsource-variable/open-sans/wght-italic.css'
 import './styles/cv.scss'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
