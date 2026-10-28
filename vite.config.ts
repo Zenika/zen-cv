@@ -31,8 +31,8 @@ function bddApi(): Plugin {
             `${server.resolvedUrls?.local[0] ?? 'http://localhost:5173/'}cv/${encodeURIComponent(id)}`,
           )
           // Either the CV or its load error shows up, so a failed load doesn't wait for the timeout
-          await page.waitForSelector('.cv-header, .cv-load-error')
-          const loadError = await page.$('.cv-load-error p')
+          await page.waitForSelector('.cv-header, .load-error')
+          const loadError = await page.$('.load-error__message')
           if (loadError) {
             res.statusCode = 500
             res.setHeader('Content-Type', 'text/plain; charset=utf-8')
@@ -41,7 +41,7 @@ function bddApi(): Plugin {
           }
           // The logo is drawn on every page by the PDF footer, so hide the in-page one
           await page.addStyleTag({
-            content: '[id^="__vue-devtools"], .cv-footer { display: none !important; }',
+            content: '[id^="__vue-devtools"], .cv-page__footer { display: none !important; }',
           })
           await page.evaluate(() => document.fonts.ready)
           // Header/footer templates can't load URLs, so the logo is inlined

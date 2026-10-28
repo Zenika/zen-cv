@@ -7,11 +7,11 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
 </script>
 
 <template>
-  <article class="cv-row cv-card cv-experience">
-    <div class="cv-experience-actions">
+  <article class="row card card--row experience-card">
+    <div class="experience-card__actions">
       <button
         type="button"
-        class="cv-icon-button cv-edit"
+        class="icon-button experience-card__edit"
         :aria-label="`Modifier l'expérience ${experience.name}`"
         @click="emit('edit')"
       >
@@ -19,48 +19,71 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
       </button>
       <button
         type="button"
-        class="cv-icon-button cv-delete"
+        class="icon-button experience-card__delete"
         :aria-label="`Supprimer l'expérience ${experience.name}`"
         @click="emit('delete')"
       >
         ×
       </button>
     </div>
-    <h3 class="cv-company">{{ experience.name }}</h3>
-    <div>
-      <p>
+    <h3 class="experience-card__company">{{ experience.name }}</h3>
+    <div class="experience-card__content">
+      <p class="experience-card__role">
         <strong>{{ experience.position }}</strong> ({{ experience.period }})
         <template v-if="'team' in experience"><br />({{ experience.team }})</template>
       </p>
 
-      <h4>Contexte du projet</h4>
-      <p>{{ experience.context }}</p>
+      <h4 class="experience-card__heading">Contexte du projet</h4>
+      <p class="experience-card__text">{{ experience.context }}</p>
 
       <template v-if="experience.realisations.length">
-        <h4>Missions & Réalisations</h4>
+        <h4 class="experience-card__heading">Missions & Réalisations</h4>
         <template v-for="(realisation, index) in experience.realisations" :key="index">
-          <ul v-if="'title' in realisation" class="cv-bullets">
+          <ul
+            v-if="'title' in realisation"
+            class="experience-card__list experience-card__list--bullets"
+          >
             <li>
               <strong>{{ realisation.title }} :</strong>
-              <ul v-if="Array.isArray(realisation.description)" class="cv-dashes">
-                <li v-for="item in realisation.description" :key="item">{{ item }}</li>
+              <ul
+                v-if="Array.isArray(realisation.description)"
+                class="experience-card__list experience-card__list--dashes experience-card__list--nested"
+              >
+                <li
+                  v-for="item in realisation.description"
+                  :key="item"
+                  class="experience-card__dash"
+                >
+                  {{ item }}
+                </li>
               </ul>
               <template v-else>{{ ' ' + realisation.description }}</template>
             </li>
           </ul>
-          <ul v-else class="cv-dashes">
-            <li v-for="item in realisation.description" :key="item">{{ item }}</li>
+          <ul v-else class="experience-card__list experience-card__list--dashes">
+            <li v-for="item in realisation.description" :key="item" class="experience-card__dash">
+              {{ item }}
+            </li>
           </ul>
         </template>
       </template>
 
-      <p v-if="experience.technicalEnvironment.length === 1" class="cv-tech-inline">
+      <p
+        v-if="experience.technicalEnvironment.length === 1"
+        class="experience-card__tech experience-card__tech--inline"
+      >
         {{ experience.technicalEnvironment[0]?.name }} :
         {{ experience.technicalEnvironment[0]?.value }}
       </p>
       <template v-else-if="experience.technicalEnvironment.length">
-        <h4 class="cv-underline">Environnement technique</h4>
-        <p v-for="tech in experience.technicalEnvironment" :key="tech.name" class="cv-tech">
+        <h4 class="experience-card__heading experience-card__heading--underlined">
+          Environnement technique
+        </h4>
+        <p
+          v-for="tech in experience.technicalEnvironment"
+          :key="tech.name"
+          class="experience-card__tech"
+        >
           <strong>{{ tech.name }} :</strong> {{ tech.value }}
         </p>
       </template>
@@ -68,72 +91,94 @@ const emit = defineEmits<{ edit: []; delete: [] }>()
   </article>
 </template>
 
-<style>
-.cv-experience {
+<style lang="scss">
+@use '@/styles/variables' as *;
+.experience-card {
   position: relative;
-}
 
-.cv-experience p,
-.cv-experience ul {
-  margin-bottom: 14px;
-}
+  &__actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 2px;
+  }
 
-.cv-experience > div > :last-child {
-  margin-bottom: 0;
-}
+  &__company {
+    font-family: $font-heading;
+    font-size: 16px;
+    font-weight: 400;
+    color: $red;
+    text-align: right;
+    text-transform: uppercase;
 
-.cv-experience h4 {
-  font-size: 15px;
-}
+    @include mobile {
+      text-align: left;
+    }
+  }
 
-.cv-experience-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 2px;
-}
+  &__role,
+  &__text {
+    margin-bottom: 14px;
+  }
 
-.cv-bullets {
-  list-style: disc !important;
-  padding-left: 40px !important;
-  margin-bottom: 0 !important;
-}
+  &__role {
+    @media print {
+      break-after: avoid;
+    }
+  }
 
-.cv-dashes {
-  padding-left: 40px !important;
-}
+  &__heading {
+    font-size: 15px;
 
-.cv-dashes li {
-  position: relative;
-}
+    &--underlined {
+      font-weight: 400;
+      text-decoration: underline;
+    }
 
-.cv-dashes li::before {
-  content: '-';
-  position: absolute;
-  left: -24px;
-}
+    @media print {
+      break-after: avoid;
+    }
+  }
 
-.cv-bullets .cv-dashes {
-  margin-bottom: 0 !important;
-}
+  &__list {
+    padding-left: 40px;
 
-.cv-tech-inline {
-  font-style: italic;
-}
+    &--bullets {
+      list-style: disc;
+      margin-bottom: 0;
+    }
 
-.cv-underline {
-  font-weight: 400;
-  text-decoration: underline;
-}
+    &--dashes {
+      margin-bottom: 14px;
+    }
 
-.cv-experience .cv-tech {
-  margin-bottom: 0;
-}
+    &--nested {
+      margin-bottom: 0;
+    }
+  }
 
-@media print {
-  .cv-experience > div > p:first-child {
-    break-after: avoid;
+  &__dash {
+    position: relative;
+
+    &::before {
+      content: '-';
+      position: absolute;
+      left: -24px;
+    }
+  }
+
+  &__tech {
+    margin-bottom: 0;
+
+    &--inline {
+      margin-bottom: 14px;
+      font-style: italic;
+    }
+  }
+
+  &__content > :last-child {
+    margin-bottom: 0;
   }
 }
 </style>
