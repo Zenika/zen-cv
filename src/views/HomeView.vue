@@ -49,10 +49,11 @@ onMounted(loadCvs)
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .home {
   max-width: $content-width;
-  margin: 0 auto;
   padding: 32px $gutter;
+  margin: 0 auto;
 
   &__title {
     margin-bottom: 24px;

@@ -37,6 +37,7 @@ defineProps<{ cv: UserData }>()
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .skills {
   padding: 20px $gutter;
   background: $grey;
@@ -50,9 +51,9 @@ defineProps<{ cv: UserData }>()
   }
 
   &__title {
+    margin-bottom: 12px;
     font-size: 14px;
     font-weight: 700;
-    margin-bottom: 12px;
   }
 
   &__level {

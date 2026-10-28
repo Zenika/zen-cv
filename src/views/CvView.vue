@@ -124,6 +124,7 @@ onMounted(load)
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .cv-page {
   &__export {
     position: absolute;
@@ -133,8 +134,8 @@ onMounted(load)
 
   &__intro {
     max-width: $content-width;
-    margin: 0 auto;
     padding: 0 $gutter 20px;
+    margin: 0 auto;
   }
 
   &__bio {
@@ -159,8 +160,8 @@ onMounted(load)
 
   &__body {
     max-width: $content-width;
-    margin: 0 auto;
     padding: 24px $gutter;
+    margin: 0 auto;
 
     @media print {
       padding-bottom: 0;
@@ -197,12 +198,12 @@ onMounted(load)
 
   &__error {
     display: flex;
-    align-items: flex-start;
     gap: 12px;
+    align-items: flex-start;
     padding: 12px 12px 12px 16px;
+    background: #fff;
     border-left: 4px solid $red;
     border-radius: 4px;
-    background: #fff;
     box-shadow: 0 4px 24px rgb(0 0 0 / 20%);
   }
 

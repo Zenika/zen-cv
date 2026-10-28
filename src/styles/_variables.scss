@@ -3,15 +3,13 @@ $grey: #f3f3f3;
 $text: #111;
 $muted: #666;
 $border: #ccc;
-
 $gutter: 24px;
 $content-width: 860px;
-
-$font-body: 'Open Sans', sans-serif;
-$font-heading: 'Montserrat', sans-serif;
+$font-body: 'Open Sans Variable', sans-serif;
+$font-heading: 'Montserrat Variable', sans-serif;
 
 @mixin mobile {
-  @media (max-width: 640px) {
+  @media (width <= 640px) {
     @content;
   }
 }

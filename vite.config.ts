@@ -10,13 +10,15 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 const databaseFile = fileURLToPath(new URL('./src/bdd/cv-database.json', import.meta.url))
 const zenikaLogoFile = fileURLToPath(new URL('./public/images/zenika.png', import.meta.url))
 
+type StoredCv = { firstname: string; name: string; title: string } & Record<string, unknown>
+
 // Dev-only API to read/write the CVs of src/bdd/cv-database.json from the browser:
 // GET /api/cvs, GET|PUT /api/cvs/:id and GET /api/cvs/:id/pdf
 function bddApi(): Plugin {
   return {
     name: 'bdd-api',
     configureServer(server) {
-      async function readDatabase(): Promise<Record<string, any>> {
+      async function readDatabase(): Promise<Record<string, StoredCv>> {
         return JSON.parse(await readFile(databaseFile, 'utf-8'))
       }
 

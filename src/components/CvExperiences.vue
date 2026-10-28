@@ -130,6 +130,7 @@ async function remove() {
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .experience-list {
   &__add {
     display: block;
@@ -153,13 +154,14 @@ async function remove() {
   }
 
   &__drag-preview {
-    opacity: 1 !important;
-    box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
     cursor: grabbing;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
+    /* stylelint-disable-next-line declaration-no-important -- beats the drag library's inline opacity */
+    opacity: 1 !important;
   }
 }
 
-body:has(.experience-list__drag-preview) {
+:root:has(.experience-list__drag-preview) {
   user-select: none;
 }
 
@@ -184,8 +186,8 @@ body:has(.experience-list__drag-preview) {
 
   &__actions {
     display: flex;
-    justify-content: flex-end;
     gap: 8px;
+    justify-content: flex-end;
   }
 
   @media print {

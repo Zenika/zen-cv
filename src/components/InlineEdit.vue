@@ -61,19 +61,20 @@ async function submit() {
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .inline-edit {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
 
   &__field {
     flex: 0 1 360px;
     min-width: 0;
     padding: 4px 8px;
+    font: inherit;
+    color: inherit;
     border: 1px solid $border;
     border-radius: 4px;
-    color: inherit;
-    font: inherit;
   }
 
   &__actions {

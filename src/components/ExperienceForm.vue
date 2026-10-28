@@ -169,6 +169,7 @@ function save() {
 
 <style lang="scss">
 @use '@/styles/variables' as *;
+
 .experience-form {
   &__company {
     color: $red;
@@ -194,17 +195,17 @@ function save() {
 
   &__input {
     padding: 6px 8px;
-    border: 1px solid $border;
-    border-radius: 4px;
     font: inherit;
     font-weight: 400;
+    border: 1px solid $border;
+    border-radius: 4px;
   }
 
   &__fieldset {
     display: grid;
     gap: 8px;
-    margin: 0;
     padding: 12px;
+    margin: 0;
     border: 1px solid $border;
     border-radius: 4px;
   }
@@ -224,17 +225,17 @@ function save() {
   &__small-button {
     justify-self: start;
     padding: 6px 12px;
-    border: 1px solid $border;
-    border-radius: 4px;
-    background: #fff;
     font: inherit;
     cursor: pointer;
+    background: #fff;
+    border: 1px solid $border;
+    border-radius: 4px;
   }
 
   &__actions {
     display: flex;
-    justify-content: flex-end;
     gap: 8px;
+    justify-content: flex-end;
   }
 
   @media print {
