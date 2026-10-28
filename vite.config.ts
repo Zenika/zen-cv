@@ -21,7 +21,15 @@ function bddApi(): Plugin {
         try {
           const page = await browser.newPage()
           await page.goto(server.resolvedUrls?.local[0] ?? 'http://localhost:5173/')
-          await page.waitForSelector('.cv-company')
+          // Either the CV or its load error shows up, so a failed load doesn't wait for the timeout
+          await page.waitForSelector('.cv-header, .cv-load-error')
+          const loadError = await page.$('.cv-load-error p')
+          if (loadError) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+            res.end(await loadError.textContent())
+            return
+          }
           // The logo is drawn on every page by the PDF footer, so hide the in-page one
           await page.addStyleTag({
             content: '[id^="__vue-devtools"], .cv-footer { display: none !important; }',
