@@ -39,7 +39,7 @@ async function move(index: number, offset: -1 | 1) {
   experiences.splice(to, 0, experience!)
   await reorder(experiences)
   await nextTick()
-  document.querySelectorAll<HTMLElement>('.cv-experience')[to]?.focus()
+  document.querySelectorAll<HTMLElement>('.experience-card')[to]?.focus()
 }
 
 const deleteDialog = useTemplateRef('deleteDialog')
@@ -64,14 +64,14 @@ async function remove() {
 </script>
 
 <template>
-  <section>
-    <div class="cv-row">
-      <h2 class="cv-section-title">Dernières expériences</h2>
-      <hr />
+  <section class="experience-list">
+    <div class="row">
+      <h2 class="section-title">Dernières expériences</h2>
+      <hr class="divider divider--flush" />
     </div>
 
     <ExperienceForm v-if="isAdding" @save="add" @cancel="isAdding = false" />
-    <button v-else type="button" class="cv-button cv-add" @click="isAdding = true">
+    <button v-else type="button" class="button experience-list__add" @click="isAdding = true">
       Ajouter une expérience
     </button>
 
@@ -82,10 +82,10 @@ async function remove() {
       :scroll-sensitivity="120"
       :scroll-speed="25"
       :force-fallback="true"
-      filter=".cv-experience-actions"
+      filter=".experience-card__actions"
       :prevent-on-filter="false"
-      ghost-class="cv-drag-placeholder"
-      drag-class="cv-drag-preview"
+      ghost-class="experience-list__placeholder"
+      drag-class="experience-list__drag-preview"
       @update:model-value="reorder"
     >
       <template v-for="(experience, index) in experiences" :key="index">
@@ -98,6 +98,7 @@ async function remove() {
         <ExperienceCard
           v-else
           :experience="experience"
+          class="experience-list__item"
           tabindex="0"
           :aria-label="`${experience.name}, flèches haut et bas pour déplacer`"
           @keydown.self.up.prevent="move(index, -1)"
@@ -108,85 +109,86 @@ async function remove() {
       </template>
     </VueDraggable>
 
-    <dialog ref="deleteDialog" class="cv-dialog" @close="onDeleteDialogClose">
+    <dialog ref="deleteDialog" class="dialog" @close="onDeleteDialogClose">
       <form method="dialog" @submit.prevent="remove">
-        <p>
+        <p class="dialog__text">
           Supprimer l'expérience <strong>{{ toDelete?.name }}</strong> ?
         </p>
-        <p v-if="saveError" class="cv-dialog-error" role="alert">
+        <p v-if="saveError" class="dialog__text dialog__text--error" role="alert">
           L'enregistrement a échoué : {{ saveError }}
         </p>
-        <div class="cv-dialog-actions">
-          <button type="button" class="cv-button" autofocus @click="deleteDialog?.close()">
+        <div class="dialog__actions">
+          <button type="button" class="button" autofocus @click="deleteDialog?.close()">
             Annuler
           </button>
-          <button class="cv-button cv-button-primary">Supprimer</button>
+          <button class="button button--primary">Supprimer</button>
         </div>
       </form>
     </dialog>
   </section>
 </template>
 
-<style>
-.cv-add {
-  display: block;
-  margin: 0 0 24px auto;
-}
-
-@media screen {
-  .cv-experience {
-    cursor: grab;
-    user-select: none;
+<style lang="scss">
+@use '@/styles/variables' as *;
+.experience-list {
+  &__add {
+    display: block;
+    margin: 0 0 24px auto;
   }
 
-  .cv:has(.cv-drag-preview) {
-    user-select: none;
+  &__item {
+    @media screen {
+      cursor: grab;
+      user-select: none;
+    }
+  }
+
+  &__placeholder {
+    background: $grey;
+    box-shadow: inset 0 0 0 2px $red;
+
+    > * {
+      visibility: hidden;
+    }
+  }
+
+  &__drag-preview {
+    opacity: 1 !important;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
+    cursor: grabbing;
   }
 }
 
-.cv-drag-placeholder {
-  background: var(--cv-grey);
-  box-shadow: inset 0 0 0 2px var(--cv-red);
+body:has(.experience-list__drag-preview) {
+  user-select: none;
 }
 
-.cv-drag-placeholder > * {
-  visibility: hidden;
-}
-
-.cv-drag-preview {
-  opacity: 1 !important;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
-  cursor: grabbing;
-}
-
-.cv-dialog {
+.dialog {
   max-width: 400px;
   padding: 24px;
   border: none;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgb(0 0 0 / 20%);
-}
 
-.cv-dialog::backdrop {
-  background: rgb(0 0 0 / 40%);
-}
+  &::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
 
-.cv-dialog p {
-  margin-bottom: 20px;
-}
+  &__text {
+    margin-bottom: 20px;
 
-.cv-dialog .cv-dialog-error {
-  color: var(--cv-red);
-}
+    &--error {
+      color: $red;
+    }
+  }
 
-.cv-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
 
-@media print {
-  .cv-dialog {
+  @media print {
     display: none;
   }
 }

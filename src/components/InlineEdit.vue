@@ -27,60 +27,74 @@ async function submit() {
 <template>
   <form
     v-if="draft !== null"
-    class="cv-inline-edit"
-    :class="{ 'cv-inline-edit-multiline': multiline }"
+    class="inline-edit"
+    :class="{ 'inline-edit--multiline': multiline }"
     @submit.prevent="submit"
     @keydown.esc="draft = null"
     @keydown.ctrl.enter.prevent="submit"
     @keydown.meta.enter.prevent="submit"
   >
-    <textarea v-if="multiline" ref="field" v-model="draft" rows="8" :aria-label="label" required />
-    <input v-else ref="field" v-model="draft" :aria-label="label" required />
-    <div class="cv-inline-edit-actions">
-      <button type="button" class="cv-button" @click="draft = null">Annuler</button>
-      <button class="cv-button cv-button-primary">Enregistrer</button>
+    <textarea
+      v-if="multiline"
+      ref="field"
+      class="inline-edit__field"
+      v-model="draft"
+      rows="8"
+      :aria-label="label"
+      required
+    />
+    <input
+      v-else
+      ref="field"
+      class="inline-edit__field"
+      v-model="draft"
+      :aria-label="label"
+      required
+    />
+    <div class="inline-edit__actions">
+      <button type="button" class="button" @click="draft = null">Annuler</button>
+      <button class="button button--primary">Enregistrer</button>
     </div>
   </form>
   <slot v-else :edit="edit" />
 </template>
 
-<style>
-.cv-inline-edit {
+<style lang="scss">
+@use '@/styles/variables' as *;
+.inline-edit {
   display: flex;
   align-items: center;
   gap: 8px;
-}
 
-.cv-inline-edit input,
-.cv-inline-edit textarea {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  color: inherit;
-  font: inherit;
-}
+  &__field {
+    flex: 0 1 360px;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 1px solid $border;
+    border-radius: 4px;
+    color: inherit;
+    font: inherit;
+  }
 
-.cv-inline-edit input {
-  flex: 0 1 360px;
-  min-width: 0;
-}
+  &__actions {
+    display: flex;
+    gap: 8px;
+    font-family: $font-body;
+    font-size: 15px;
+  }
 
-.cv-inline-edit-actions {
-  display: flex;
-  gap: 8px;
-}
+  &--multiline {
+    display: grid;
+    gap: 12px;
 
-.cv-inline-edit-multiline {
-  display: grid;
-  gap: 12px;
-}
+    .inline-edit__field {
+      padding: 8px;
+      resize: vertical;
+    }
 
-.cv-inline-edit-multiline textarea {
-  padding: 8px;
-  resize: vertical;
-}
-
-.cv-inline-edit-multiline .cv-inline-edit-actions {
-  justify-content: flex-end;
+    .inline-edit__actions {
+      justify-content: flex-end;
+    }
+  }
 }
 </style>

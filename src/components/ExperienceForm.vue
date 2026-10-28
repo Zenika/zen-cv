@@ -61,130 +61,183 @@ function save() {
 </script>
 
 <template>
-  <form class="cv-row cv-card cv-experience-form" @submit.prevent="save">
-    <input v-model="form.name" class="cv-company" placeholder="Entreprise" required />
-    <div>
-      <label>Poste <input v-model="form.position" required /></label>
-      <label>Période <input v-model="form.period" placeholder="depuis mars 2024" required /></label>
-      <label>Équipe <input v-model="form.team" placeholder="équipe de 6 personnes" /></label>
-      <label>Contexte du projet <textarea v-model="form.context" rows="4" required /></label>
+  <form class="row card card--row experience-form" @submit.prevent="save">
+    <input
+      v-model="form.name"
+      class="experience-form__input experience-form__company"
+      placeholder="Entreprise"
+      required
+    />
+    <div class="experience-form__fields">
+      <label class="experience-form__label"
+        >Poste <input v-model="form.position" class="experience-form__input" required
+      /></label>
+      <label class="experience-form__label"
+        >Période
+        <input
+          v-model="form.period"
+          class="experience-form__input"
+          placeholder="depuis mars 2024"
+          required
+      /></label>
+      <label class="experience-form__label"
+        >Équipe
+        <input
+          v-model="form.team"
+          class="experience-form__input"
+          placeholder="équipe de 6 personnes"
+      /></label>
+      <label class="experience-form__label"
+        >Contexte du projet
+        <textarea v-model="form.context" class="experience-form__input" rows="4" required />
+      </label>
 
-      <fieldset>
-        <legend>Missions & Réalisations</legend>
+      <fieldset class="experience-form__fieldset">
+        <legend class="experience-form__legend">Missions & Réalisations</legend>
         <div
           v-for="(realisation, realisationIndex) in form.realisations"
           :key="realisationIndex"
-          class="cv-experience-form-group"
+          class="experience-form__group"
         >
-          <input v-model="realisation.title" placeholder="Titre (optionnel)" />
-          <textarea v-model="realisation.items" rows="3" placeholder="Un élément par ligne" />
+          <input
+            v-model="realisation.title"
+            class="experience-form__input"
+            placeholder="Titre (optionnel)"
+          />
+          <textarea
+            v-model="realisation.items"
+            class="experience-form__input"
+            rows="3"
+            placeholder="Un élément par ligne"
+          />
           <button
             type="button"
+            class="experience-form__small-button"
             aria-label="Supprimer la réalisation"
             @click="form.realisations.splice(realisationIndex, 1)"
           >
             ×
           </button>
         </div>
-        <button type="button" @click="form.realisations.push({ title: '', items: '' })">
+        <button
+          type="button"
+          class="experience-form__small-button"
+          @click="form.realisations.push({ title: '', items: '' })"
+        >
           Ajouter une réalisation
         </button>
       </fieldset>
 
-      <fieldset>
-        <legend>Environnement technique</legend>
+      <fieldset class="experience-form__fieldset">
+        <legend class="experience-form__legend">Environnement technique</legend>
         <div
           v-for="(tech, techIndex) in form.technicalEnvironment"
           :key="techIndex"
-          class="cv-experience-form-group"
+          class="experience-form__group"
         >
-          <input v-model="tech.name" placeholder="Frontend" />
-          <input v-model="tech.value" placeholder="Vue.js, TypeScript" />
+          <input v-model="tech.name" class="experience-form__input" placeholder="Frontend" />
+          <input
+            v-model="tech.value"
+            class="experience-form__input"
+            placeholder="Vue.js, TypeScript"
+          />
           <button
             type="button"
+            class="experience-form__small-button"
             aria-label="Supprimer l'environnement"
             @click="form.technicalEnvironment.splice(techIndex, 1)"
           >
             ×
           </button>
         </div>
-        <button type="button" @click="form.technicalEnvironment.push({ name: '', value: '' })">
+        <button
+          type="button"
+          class="experience-form__small-button"
+          @click="form.technicalEnvironment.push({ name: '', value: '' })"
+        >
           Ajouter un environnement
         </button>
       </fieldset>
 
-      <div class="cv-experience-form-actions">
-        <button type="button" class="cv-button" @click="emit('cancel')">Annuler</button>
-        <button class="cv-button cv-button-primary">Enregistrer</button>
+      <div class="experience-form__actions">
+        <button type="button" class="button" @click="emit('cancel')">Annuler</button>
+        <button class="button button--primary">Enregistrer</button>
       </div>
     </div>
   </form>
 </template>
 
-<style>
-.cv-experience-form > div {
-  display: grid;
-  gap: 12px;
-}
+<style lang="scss">
+@use '@/styles/variables' as *;
+.experience-form {
+  &__company {
+    color: $red;
+    text-align: right;
+    text-transform: uppercase;
 
-.cv-experience-form label {
-  display: grid;
-  gap: 4px;
-  font-weight: 700;
-}
+    @include mobile {
+      margin-bottom: 8px;
+      text-align: left;
+    }
+  }
 
-.cv-experience-form input,
-.cv-experience-form textarea,
-.cv-experience-form fieldset button {
-  font: inherit;
-}
+  &__fields {
+    display: grid;
+    gap: 12px;
+  }
 
-.cv-experience-form input,
-.cv-experience-form textarea {
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-weight: 400;
-}
+  &__label {
+    display: grid;
+    gap: 4px;
+    font-weight: 700;
+  }
 
-.cv-experience-form fieldset {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
+  &__input {
+    padding: 6px 8px;
+    border: 1px solid $border;
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 400;
+  }
 
-.cv-experience-form legend {
-  padding-inline: 4px;
-  font-weight: 700;
-}
+  &__fieldset {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid $border;
+    border-radius: 4px;
+  }
 
-.cv-experience-form-group {
-  display: grid;
-  grid-template-columns: 1fr 2fr auto;
-  gap: 8px;
-  align-items: start;
-}
+  &__legend {
+    padding-inline: 4px;
+    font-weight: 700;
+  }
 
-.cv-experience-form fieldset button {
-  justify-self: start;
-  padding: 6px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-}
+  &__group {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 8px;
+    align-items: start;
+  }
 
-.cv-experience-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
+  &__small-button {
+    justify-self: start;
+    padding: 6px 12px;
+    border: 1px solid $border;
+    border-radius: 4px;
+    background: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
 
-@media print {
-  .cv-experience-form {
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  @media print {
     display: none;
   }
 }

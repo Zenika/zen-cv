@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import './styles/cv.css'
+import './styles/cv.scss'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import HomeView from './views/HomeView.vue'
