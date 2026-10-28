@@ -8,7 +8,7 @@ const port = Number(process.env.PORT ?? 3000)
 const staticRoot = resolve(process.env.STATIC_ROOT ?? 'dist')
 
 const { app, close } = createServerApp({
-  databaseFile: resolve(process.env.CV_DATABASE_FILE ?? 'src/bdd/cv-database.json'),
+  databaseUrl: process.env.DATABASE_URL,
   logoFile: resolve(staticRoot, 'images/zenika.png'),
   baseUrl: () => `http://localhost:${port}/`,
 })

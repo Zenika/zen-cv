@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { loadEnv } from 'vite'
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
 import viteConfig from './vite.config.ts'
 
@@ -15,7 +16,12 @@ export default mergeConfig(
         },
         {
           extends: true,
-          test: { name: 'server', environment: 'node', include: ['server/**/*.spec.ts'] },
+          test: {
+            name: 'server',
+            environment: 'node',
+            include: ['server/**/*.spec.ts'],
+            env: loadEnv('test', process.cwd(), 'TEST_'),
+          },
         },
       ],
     },

@@ -2,7 +2,7 @@
   "raphael-grand": {
     "firstname": "Raphaël",
     "name": "Grand",
-    "title": "Développeur Fullstack prout",
+    "title": "Développeur Fullstack Prout",
     "bio": "Lorem ipsum dolor sit amet, consectetur adipiscing elit,\n\nsed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
     "expertise": [
       {
@@ -32,11 +32,7 @@
       "TDD (Test Driven Development)",
       "BDD (Behavior Driven Development)"
     ],
-    "trainer": [
-      "Formateur NodeJS",
-      "Formateur VueJS",
-      "Formateur Javascript"
-    ],
+    "trainer": ["Formateur NodeJS", "Formateur VueJS", "Formateur Javascript"],
     "experiences": [
       {
         "name": "Invivo Digital Factory",
@@ -466,10 +462,7 @@
       "TDD (Test Driven Development)",
       "Architecture hexagonale"
     ],
-    "trainer": [
-      "Formatrice Spring Boot",
-      "Formatrice Kubernetes"
-    ],
+    "trainer": ["Formatrice Spring Boot", "Formatrice Kubernetes"],
     "experiences": [
       {
         "name": "Banque Horizon",

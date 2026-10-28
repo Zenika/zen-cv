@@ -1,23 +1,17 @@
-import { copyFile, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { readFile } from 'node:fs/promises'
 import { isDeepStrictEqual } from 'node:util'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { cvSchema, type UserData } from '../../shared/cv.ts'
+import { beforeEach, describe, expect, it } from 'vitest'
+import type { UserData } from '../../shared/cv.ts'
 import { createApp } from '../app.ts'
-import { createJsonRepository } from '../repository/jsonRepository.ts'
+import { readSeed, seedFile } from '../db/seed.ts'
+import type { CvRepository } from '../repository/cvRepository.ts'
 import { createCvService } from '../services/cvService.ts'
+import { createMemoryRepository } from './memoryRepository.ts'
 
-const sourceDatabase = new URL('../../src/bdd/cv-database.json', import.meta.url)
-
-let directory: string
-let databaseFile: string
+let seedData: Record<string, UserData>
+let repository: CvRepository
 let app: ReturnType<typeof createApp>
 let renderedIds: string[]
-
-async function readDatabase(): Promise<Record<string, UserData>> {
-  return JSON.parse(await readFile(databaseFile, 'utf-8'))
-}
 
 function put(id: string, body: unknown) {
   return app.request(`/api/cvs/${id}`, {
@@ -28,9 +22,8 @@ function put(id: string, body: unknown) {
 }
 
 beforeEach(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'zen-cv-'))
-  databaseFile = join(directory, 'cv-database.json')
-  await copyFile(sourceDatabase, databaseFile)
+  seedData = await readSeed()
+  repository = createMemoryRepository(seedData)
   renderedIds = []
   const pdfRenderer = {
     async render(id: string) {
@@ -38,18 +31,13 @@ beforeEach(async () => {
       return new TextEncoder().encode('%PDF-fake')
     },
   }
-  app = createApp(createCvService(createJsonRepository(databaseFile), pdfRenderer))
+  app = createApp(createCvService(repository, pdfRenderer))
 })
 
-afterEach(async () => {
-  await rm(directory, { recursive: true, force: true })
-})
-
-describe('database', () => {
+describe('seed data', () => {
   it('matches the CV schema without losing any field', async () => {
-    for (const cv of Object.values(await readDatabase())) {
-      expect(isDeepStrictEqual(cvSchema.parse(cv), cv)).toBe(true)
-    }
+    const raw = JSON.parse(await readFile(seedFile, 'utf-8'))
+    expect(isDeepStrictEqual(seedData, raw)).toBe(true)
   })
 })
 
@@ -70,7 +58,7 @@ describe('GET /api/cvs/:id', () => {
   it('returns the CV', async () => {
     const response = await app.request('/api/cvs/camille-martin')
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual((await readDatabase())['camille-martin'])
+    expect(await response.json()).toEqual(seedData['camille-martin'])
   })
 
   it('answers 404 for an unknown CV', async () => {
@@ -82,26 +70,22 @@ describe('GET /api/cvs/:id', () => {
 
 describe('PUT /api/cvs/:id', () => {
   it('replaces the CV', async () => {
-    const cv = { ...(await readDatabase())['camille-martin']!, title: 'Architecte Cloud' }
-    const response = await put('camille-martin', cv)
-    expect(response.status).toBe(204)
-    expect((await readDatabase())['camille-martin']).toEqual(cv)
-    expect(await readdir(directory)).toEqual(['cv-database.json'])
+    const cv = { ...seedData['camille-martin']!, title: 'Architecte Cloud' }
+    expect((await put('camille-martin', cv)).status).toBe(204)
+    expect(await repository.get('camille-martin')).toEqual(cv)
   })
 
   it('drops unknown fields', async () => {
-    const cv = (await readDatabase())['camille-martin']!
+    const cv = seedData['camille-martin']!
     await put('camille-martin', { ...cv, unexpected: true })
-    expect((await readDatabase())['camille-martin']).toEqual(cv)
+    expect(await repository.get('camille-martin')).toEqual(cv)
   })
 
   it('rejects an invalid CV with the faulty field and keeps the data', async () => {
-    const before = await readFile(databaseFile, 'utf-8')
-    const cv = (await readDatabase())['camille-martin']!
-    const response = await put('camille-martin', { ...cv, title: 42 })
+    const response = await put('camille-martin', { ...seedData['camille-martin']!, title: 42 })
     expect(response.status).toBe(400)
     expect(await response.text()).toContain('→ at title')
-    expect(await readFile(databaseFile, 'utf-8')).toBe(before)
+    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
   })
 
   it('rejects malformed JSON', async () => {
@@ -109,20 +93,8 @@ describe('PUT /api/cvs/:id', () => {
   })
 
   it('answers 404 for an unknown CV without creating it', async () => {
-    const cv = (await readDatabase())['camille-martin']!
-    expect((await put('inconnu', cv)).status).toBe(404)
-    expect((await readDatabase())['inconnu']).toBeUndefined()
-  })
-
-  it('keeps every change when saves run concurrently', async () => {
-    const database = await readDatabase()
-    await Promise.all([
-      put('camille-martin', { ...database['camille-martin']!, title: 'Premier' }),
-      put('raphael-grand', { ...database['raphael-grand']!, title: 'Second' }),
-    ])
-    const saved = await readDatabase()
-    expect(saved['camille-martin']!.title).toBe('Premier')
-    expect(saved['raphael-grand']!.title).toBe('Second')
+    expect((await put('inconnu', seedData['camille-martin'])).status).toBe(404)
+    expect(await repository.get('inconnu')).toBeUndefined()
   })
 })
 
