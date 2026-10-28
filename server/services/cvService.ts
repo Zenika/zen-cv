@@ -28,8 +28,7 @@ export function createCvService(
     },
 
     async replace(id: string, cv: UserData) {
-      await get(id)
-      await repository.save(id, cv)
+      if (!(await repository.update(id, cv))) throw new CvNotFoundError(id)
     },
 
     async exportPdf(id: string) {

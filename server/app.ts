@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { createPdfRenderer } from './pdf/pdfRenderer.ts'
-import { createJsonRepository } from './repository/jsonRepository.ts'
+import { createPool } from './db/database.ts'
+import { createPostgresRepository } from './repository/postgresRepository.ts'
 import { createCvRoutes } from './routes/cvs.ts'
 import { createCvService, type CvService } from './services/cvService.ts'
 import { CvNotFoundError, PdfExportError } from './services/errors.ts'
@@ -24,13 +25,19 @@ export function createApp(service: CvService) {
 }
 
 type ServerOptions = {
-  databaseFile: string
+  databaseUrl: string | undefined
   logoFile: string
   baseUrl: () => string
 }
 
-export function createServerApp({ databaseFile, logoFile, baseUrl }: ServerOptions) {
+export function createServerApp({ databaseUrl, logoFile, baseUrl }: ServerOptions) {
+  const pool = createPool(databaseUrl)
   const pdfRenderer = createPdfRenderer({ baseUrl, logoFile })
-  const service = createCvService(createJsonRepository(databaseFile), pdfRenderer)
-  return { app: createApp(service), close: () => pdfRenderer.close() }
+  const service = createCvService(createPostgresRepository(pool), pdfRenderer)
+  return {
+    app: createApp(service),
+    close: async () => {
+      await Promise.all([pdfRenderer.close(), pool.end()])
+    },
+  }
 }

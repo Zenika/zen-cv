@@ -1,11 +1,10 @@
 import { fileURLToPath, URL } from 'node:url'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
-const databaseFile = fileURLToPath(new URL('./src/bdd/cv-database.json', import.meta.url))
 const zenikaLogoFile = fileURLToPath(new URL('./public/images/zenika.png', import.meta.url))
 
 type ServerModule = typeof import('./server/app.ts')
@@ -24,8 +23,13 @@ function apiServer(): Plugin {
         if (current?.module !== module) {
           await current?.close()
           const { getRequestListener } = await import('@hono/node-server')
+          const { DATABASE_URL } = loadEnv(
+            server.config.mode,
+            server.config.envDir || server.config.root,
+            '',
+          )
           const { app, close } = module.createServerApp({
-            databaseFile,
+            databaseUrl: DATABASE_URL,
             logoFile: zenikaLogoFile,
             baseUrl: () => server.resolvedUrls?.local[0] ?? 'http://localhost:5173/',
           })
@@ -41,7 +45,11 @@ function apiServer(): Plugin {
             await getListener()
           )(req, res)
         } catch (error) {
-          next(error)
+          const message = error instanceof Error ? error.message : String(error)
+          server.config.logger.error(`[api] ${message}`)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+          res.end(message)
         }
       })
       server.httpServer?.on('close', () => current?.close())
