@@ -1,0 +1,17 @@
+.git
+.github
+.vscode
+node_modules
+dist
+dist-ssr
+coverage
+test-results
+playwright-report
+e2e
+server/__tests__
+.env*
+*.local
+*.log
+.eslintcache
+Dockerfile
+.dockerignore

@@ -1,0 +1,81 @@
+name: Check and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGION: europe-west9
+  SERVICE: zen-cv
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: zen_cv_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: git diff --exit-code
+      - run: pnpm build
+      - run: pnpm exec vitest run --project server
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/zen_cv_test
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE: europe-west9-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/zen-cv/zen-cv:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - run: docker build --tag "$IMAGE" .
+      - run: docker push "$IMAGE"
+      - run: >-
+          gcloud run deploy "$SERVICE"
+          --project "${{ vars.GCP_PROJECT_ID }}"
+          --region "$REGION"
+          --image "$IMAGE"
+          --service-account "${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}"
+          --add-cloudsql-instances "${{ vars.CLOUD_SQL_CONNECTION_NAME }}"
+          --set-secrets DATABASE_URL=zen-cv-database-url:latest
+          --no-allow-unauthenticated
+          --memory 2Gi
+          --cpu 1
+          --concurrency 10
+          --quiet

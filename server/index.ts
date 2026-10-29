@@ -7,11 +7,13 @@ import { createServerApp } from './app.ts'
 const port = Number(process.env.PORT ?? 3000)
 const staticRoot = resolve(process.env.STATIC_ROOT ?? 'dist')
 
-const { app, close } = createServerApp({
+const { app, migrate, close } = createServerApp({
   databaseUrl: process.env.DATABASE_URL,
   logoFile: resolve(staticRoot, 'images/zenika.png'),
   baseUrl: () => `http://localhost:${port}/`,
 })
+
+await migrate()
 
 const root = new Hono()
   .route('/', app)

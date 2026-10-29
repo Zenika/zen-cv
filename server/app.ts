@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { createPdfRenderer } from './pdf/pdfRenderer.ts'
-import { createPool } from './db/database.ts'
+import { createPool, migrate } from './db/database.ts'
 import { createPostgresRepository } from './repository/postgresRepository.ts'
 import { createCvRoutes } from './routes/cvs.ts'
 import { createCvService, type CvService } from './services/cvService.ts'
@@ -36,6 +36,7 @@ export function createServerApp({ databaseUrl, logoFile, baseUrl }: ServerOption
   const service = createCvService(createPostgresRepository(pool), pdfRenderer)
   return {
     app: createApp(service),
+    migrate: () => migrate(pool),
     close: async () => {
       await Promise.all([pdfRenderer.close(), pool.end()])
     },
