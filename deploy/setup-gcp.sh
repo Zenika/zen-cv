@@ -35,7 +35,7 @@ gcloud iam service-accounts describe "$DEPLOY_SA" >/dev/null 2>&1 ||
   gcloud iam service-accounts create zen-cv-deploy --display-name "zen-cv GitHub deploy"
 
 echo "== DATABASE_URL secret"
-echo "Format : postgresql://USER:PASSWORD@/DATABASE?host=/cloudsql/$CLOUD_SQL_CONNECTION_NAME"
+echo "Format : postgresql://USER:PASSWORD@/postgres?host=/cloudsql/$CLOUD_SQL_CONNECTION_NAME"
 read -rsp "DATABASE_URL (laisser vide pour garder la valeur actuelle) : " DATABASE_URL
 echo
 if ! gcloud secrets describe "$SECRET" >/dev/null 2>&1; then

@@ -4,7 +4,7 @@
 set -euo pipefail
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1
 
-PROJECT_ID="${PROJECT_ID:?définissez PROJECT_ID}"
+PROJECT_ID="zen-cv-513014"
 REGION=europe-west9
 SERVICE=zen-cv
 DOMAIN=zenika.com
