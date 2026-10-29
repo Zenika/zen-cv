@@ -1,6 +1,6 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["server/**/*", "shared/**/*"],
+  "include": ["server/**/*", "shared/**/*", "e2e/**/*"],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",

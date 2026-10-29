@@ -54,7 +54,7 @@ Then open http://localhost:5173.
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | dev, start, db scripts | Postgres connection string, read from `.env.local` locally and from Secret Manager in production. |
-| `TEST_DATABASE_URL` | tests | Optional. Turns on the Postgres tests, which run in a temporary schema that is dropped afterwards. |
+| `TEST_DATABASE_URL` | tests | Optional for unit tests: turns on the Postgres tests, which run in a temporary schema dropped afterwards. Required for `pnpm test:e2e`, which uses the `e2e` schema. |
 | `PORT` | start | HTTP port. Default `3000`; Cloud Run sets `8080`. |
 | `STATIC_ROOT` | start | Folder containing the built front end. Default `dist`. |
 
@@ -84,6 +84,7 @@ server/              Hono back end
   pdf/               PDF rendering with Playwright
   scripts/           db:migrate and db:seed
   __tests__/         API and repository tests
+e2e/                 Playwright end-to-end tests and their database setup
 deploy/              one-off GCP setup scripts
 Dockerfile           production image
 .github/workflows/   CI and deployment
@@ -225,18 +226,43 @@ In development there is no separate back-end process.
 ## Tests
 
 ```sh
-pnpm test:unit                          # all projects, watch mode
+pnpm test:unit                          # unit tests, all projects, watch mode
+pnpm exec vitest run --project app      # front end only
 pnpm exec vitest run --project server   # back end only
+pnpm test:e2e                           # end-to-end tests (needs TEST_DATABASE_URL)
 ```
+
+### Unit tests (Vitest)
 
 Vitest runs two projects (`vitest.config.ts`):
 
-- `app`: front-end tests with jsdom and `@vue/test-utils` (`src/**/__tests__`).
+- `app`: front-end tests in jsdom with `@vue/test-utils`, next to the code they test (`src/**/__tests__`):
+  - `service/__tests__/cvApi.spec.ts`: URLs, request bodies and error messages, with `fetch` mocked.
+  - `composables/__tests__/useCv.spec.ts`: loading, saving (including optimistic saves and their rollback) and the PDF download, with the API service mocked.
+  - `components/__tests__/`: `InlineEdit`, `ExperienceForm` (form ↔ experience conversion) and `CvExperiences` (add, edit, keyboard reordering).
 - `server`: back-end tests in Node (`server/__tests__`).
   - `cvs.spec.ts` tests the API end to end through `app.request()`, using an in-memory repository and a fake PDF renderer.
   - `postgresRepository.spec.ts` runs against a real Postgres when `TEST_DATABASE_URL` is set, in a temporary schema. Don't point it at a database you care about.
 
-`src/__tests__/App.spec.ts` and `e2e/vue.spec.ts` are leftovers from the Vite scaffold and are out of date, so CI doesn't run them.
+### End-to-end tests (Playwright)
+
+`e2e/cv.spec.ts` drives the real app in Chromium: listing and opening CVs, editing the title, adding and deleting an experience, keyboard reordering, PDF export, and the error shown for an unknown CV.
+
+`pnpm test:e2e` (see `playwright.config.ts`):
+
+1. builds the front end;
+2. resets the `e2e` schema of the `TEST_DATABASE_URL` database (`e2e/prepare-db.ts`): drops it, recreates it, migrates and seeds it;
+3. starts the production server on port 4173 against that schema;
+4. runs the tests one at a time, since they share the database.
+
+Each run starts from the seed data, and nothing outside the `e2e` schema is touched. The first time, install the browser with `pnpm exec playwright install chromium`.
+
+Locally, any throwaway Postgres will do:
+
+```sh
+docker run -d --rm --name zen-cv-test-pg -e POSTGRES_PASSWORD=test -p 5499:5432 postgres:17-alpine
+# then in .env.local: TEST_DATABASE_URL=postgresql://postgres:test@localhost:5499/postgres
+```
 
 ## Deployment
 
@@ -250,7 +276,8 @@ The app runs on **Google Cloud Run** (`europe-west9`) with **Cloud SQL for Postg
   1. install dependencies;
   2. lint, and fail if lint changes any file;
   3. type-check and build;
-  4. run the back-end tests against a temporary Postgres.
+  4. run all the Vitest tests, front and back, against a temporary Postgres;
+  5. run the Playwright end-to-end tests. If they fail, the report and traces are uploaded as the `playwright-report` artifact.
 - **deploy** runs on `main` only:
   1. signs in to GCP through Workload Identity Federation, so no keys are stored in GitHub;
   2. builds the Docker image and pushes it to Artifact Registry;
