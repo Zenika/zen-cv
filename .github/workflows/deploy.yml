@@ -43,9 +43,21 @@ jobs:
       - run: pnpm lint
       - run: git diff --exit-code
       - run: pnpm build
-      - run: pnpm exec vitest run --project server
+      - run: pnpm exec vitest run
         env:
           TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/zen_cv_test
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/zen_cv_test
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
   deploy:
     needs: check
