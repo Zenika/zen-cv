@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { errorMessage, getCv, getCvPdf, saveCv } from '../service/cvApi'
+import { errorMessage, getCv, getCvPdf, isConflict, saveCv } from '../service/cvApi'
 import type { UserData } from '../types'
 
 export type SaveCv = (
@@ -11,13 +11,18 @@ export function useCv(id: string) {
   const cv = ref<UserData | null>(null)
   const loadError = ref<string | null>(null)
   const saveError = ref<string | null>(null)
+  const conflict = ref(false)
   const exportError = ref<string | null>(null)
   const isExporting = ref(false)
+  let version = ''
+  let saving: Promise<unknown> = Promise.resolve()
 
   async function load() {
     loadError.value = null
     try {
-      cv.value = await getCv(id)
+      const loaded = await getCv(id)
+      cv.value = loaded.cv
+      version = loaded.version
     } catch (error) {
       loadError.value = errorMessage(error)
     }
@@ -29,16 +34,21 @@ export function useCv(id: string) {
     const previous = cv.value
     const next = { ...previous, ...patch }
     if (optimistic) cv.value = next
-    try {
-      await saveCv(id, next)
-    } catch (error) {
-      saveError.value = errorMessage(error)
-      if (optimistic) cv.value = previous
-      return false
-    }
-    saveError.value = null
-    cv.value = next
-    return true
+    const saved = saving.then(async () => {
+      try {
+        version = await saveCv(id, next, version)
+      } catch (error) {
+        saveError.value = errorMessage(error)
+        conflict.value = isConflict(error)
+        if (optimistic) cv.value = previous
+        return false
+      }
+      saveError.value = null
+      cv.value = next
+      return true
+    })
+    saving = saved
+    return saved
   }
 
   async function exportPdf() {
@@ -58,5 +68,5 @@ export function useCv(id: string) {
     }
   }
 
-  return { cv, loadError, load, saveError, save, exportError, isExporting, exportPdf }
+  return { cv, loadError, load, saveError, conflict, save, exportError, isExporting, exportPdf }
 }

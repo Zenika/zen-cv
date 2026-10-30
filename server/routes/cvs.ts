@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { cvSchema } from '../../shared/cv.ts'
 import type { CvService } from '../services/cvService.ts'
 
+const etag = (version: number) => `"${version}"`
+
 export function createCvRoutes(service: CvService) {
   return new Hono()
     .get('/', async (c) => c.json(await service.list()))
@@ -21,15 +23,22 @@ export function createCvRoutes(service: CvService) {
         return c.json(await service.importPdf(pdf), 201)
       },
     )
-    .get('/:id', async (c) => c.json(await service.get(c.req.param('id'))))
+    .get('/:id', async (c) => {
+      const { cv, version } = await service.get(c.req.param('id'))
+      c.header('ETag', etag(version))
+      return c.json(cv)
+    })
     .put(
       '/:id',
       zValidator('json', cvSchema, (result, c) => {
         if (!result.success) return c.text(z.prettifyError(result.error), 400)
       }),
       async (c) => {
-        await service.replace(c.req.param('id'), c.req.valid('json'))
-        return c.body(null, 204)
+        const version = /^"(\d+)"$/.exec(c.req.header('If-Match') ?? '')?.[1]
+        if (!version)
+          return c.text('version du CV manquante : rechargez-le avant de l’enregistrer.', 428)
+        const saved = await service.replace(c.req.param('id'), c.req.valid('json'), Number(version))
+        return c.body(null, 204, { ETag: etag(saved) })
       },
     )
     .delete('/:id', async (c) => {

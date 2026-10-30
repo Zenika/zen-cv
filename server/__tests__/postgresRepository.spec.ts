@@ -34,30 +34,56 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
 
     const repository = createPostgresRepository(pool)
     const edited = { ...seedData['camille-martin']!, title: 'Modifié' }
-    await repository.update('camille-martin', edited)
+    await repository.update('camille-martin', edited, 1)
     expect(await seed(pool)).toEqual([])
 
     expect((await repository.list()).map(({ id }) => id)).toEqual(Object.keys(seedData))
-    expect(await repository.get('camille-martin')).toEqual(edited)
-    expect(await repository.get('raphael-grand')).toEqual(seedData['raphael-grand'])
+    expect(await repository.get('camille-martin')).toEqual({ cv: edited, version: 2 })
+    expect(await repository.get('raphael-grand')).toEqual({
+      cv: seedData['raphael-grand'],
+      version: 1,
+    })
   })
 
-  it('updates an existing CV only', async () => {
+  it('updates an existing CV at the expected version only', async () => {
     await seed(pool)
     const repository = createPostgresRepository(pool)
-    const cv = (await repository.get('camille-martin'))!
-    expect(await repository.update('inconnu', cv)).toBe(false)
+    const { cv, version } = (await repository.get('camille-martin'))!
+    expect(version).toBe(1)
+    expect(await repository.update('inconnu', cv, 1)).toBe('not-found')
     expect(await repository.get('inconnu')).toBeUndefined()
 
     const { rows: before } = await pool.query(
       "select updated_at from cvs where id = 'camille-martin'",
     )
-    expect(await repository.update('camille-martin', { ...cv, title: 'Nouveau' })).toBe(true)
+    expect(await repository.update('camille-martin', { ...cv, title: 'Nouveau' }, 1)).toEqual({
+      version: 2,
+    })
     const { rows: after } = await pool.query(
       "select updated_at from cvs where id = 'camille-martin'",
     )
-    expect((await repository.get('camille-martin'))!.title).toBe('Nouveau')
+    expect(await repository.get('camille-martin')).toEqual({
+      cv: { ...cv, title: 'Nouveau' },
+      version: 2,
+    })
     expect(after[0].updated_at.getTime()).toBeGreaterThan(before[0].updated_at.getTime())
+
+    expect(await repository.update('camille-martin', { ...cv, title: 'Périmé' }, 1)).toBe(
+      'conflict',
+    )
+    expect((await repository.get('camille-martin'))!.cv.title).toBe('Nouveau')
+  })
+
+  it('accepts only one of two saves made from the same version', async () => {
+    await seed(pool)
+    const repository = createPostgresRepository(pool)
+    const { cv } = (await repository.get('camille-martin'))!
+    const results = await Promise.all([
+      repository.update('camille-martin', { ...cv, title: 'Premier' }, 1),
+      repository.update('camille-martin', { ...cv, title: 'Second' }, 1),
+    ])
+    expect(results.filter((result) => result === 'conflict')).toHaveLength(1)
+    expect((await repository.get('camille-martin'))!.version).toBe(2)
   })
 
   it('creates a CV only under a free id', async () => {
@@ -66,9 +92,9 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
     const seedData = await readSeed()
     const imported = { ...seedData['camille-martin']!, title: 'Importé' }
     expect(await repository.create('camille-martin', imported)).toBe(false)
-    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+    expect((await repository.get('camille-martin'))!.cv).toEqual(seedData['camille-martin'])
     expect(await repository.create('camille-martin-2', imported)).toBe(true)
-    expect(await repository.get('camille-martin-2')).toEqual(imported)
+    expect(await repository.get('camille-martin-2')).toEqual({ cv: imported, version: 1 })
   })
 
   it('deletes an existing CV only', async () => {
@@ -83,18 +109,18 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
   it('reads a CV stored before certifications existed', async () => {
     const { certifications: _certifications, ...legacy } = (await readSeed())['camille-martin']!
     await pool.query("insert into cvs (id, data) values ('ancien', $1)", [JSON.stringify(legacy)])
-    expect((await createPostgresRepository(pool).get('ancien'))!.certifications).toEqual([])
+    expect((await createPostgresRepository(pool).get('ancien'))!.cv.certifications).toEqual([])
   })
 
-  it('keeps every change when updates run concurrently', async () => {
+  it('keeps every change when different CVs are updated concurrently', async () => {
     await seed(pool)
     const repository = createPostgresRepository(pool)
     const seedData = await readSeed()
     await Promise.all([
-      repository.update('camille-martin', { ...seedData['camille-martin']!, title: 'Premier' }),
-      repository.update('raphael-grand', { ...seedData['raphael-grand']!, title: 'Second' }),
+      repository.update('camille-martin', { ...seedData['camille-martin']!, title: 'Premier' }, 1),
+      repository.update('raphael-grand', { ...seedData['raphael-grand']!, title: 'Second' }, 1),
     ])
-    expect((await repository.get('camille-martin'))!.title).toBe('Premier')
-    expect((await repository.get('raphael-grand'))!.title).toBe('Second')
+    expect((await repository.get('camille-martin'))!.cv.title).toBe('Premier')
+    expect((await repository.get('raphael-grand'))!.cv.title).toBe('Second')
   })
 })

@@ -17,7 +17,12 @@ import {
   type Identity,
 } from './auth/identity.ts'
 import { createPdfImporter } from './import/pdfImporter.ts'
-import { CvImportError, CvNotFoundError, PdfExportError } from './services/errors.ts'
+import {
+  CvConflictError,
+  CvImportError,
+  CvNotFoundError,
+  PdfExportError,
+} from './services/errors.ts'
 
 z.config(z.locales.fr())
 
@@ -37,6 +42,7 @@ export function createApp(service: CvService, identity: Identity) {
     .onError((error, c) => {
       if (error instanceof HTTPException) return error.getResponse()
       if (error instanceof CvNotFoundError) return c.text(error.message, 404)
+      if (error instanceof CvConflictError) return c.text(error.message, 412)
       if (error instanceof CvImportError) return c.text(error.message, 422)
       if (error instanceof PdfExportError) return c.text(error.message, 500)
       console.error(error)

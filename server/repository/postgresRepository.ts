@@ -12,18 +12,23 @@ export function createPostgresRepository(pool: pg.Pool): CvRepository {
     },
 
     async get(id) {
-      const { rows } = await pool.query<{ data: unknown }>('select data from cvs where id = $1', [
-        id,
-      ])
-      return rows[0] && cvSchema.parse(rows[0].data)
+      const { rows } = await pool.query<{ data: unknown; version: number }>(
+        'select data, version from cvs where id = $1',
+        [id],
+      )
+      return rows[0] && { cv: cvSchema.parse(rows[0].data), version: rows[0].version }
     },
 
-    async update(id, cv) {
-      const { rowCount } = await pool.query(
-        'update cvs set data = $2, updated_at = clock_timestamp() where id = $1',
-        [id, JSON.stringify(cv)],
+    async update(id, cv, version) {
+      const { rows } = await pool.query<{ version: number }>(
+        `update cvs set data = $2, version = version + 1, updated_at = clock_timestamp()
+         where id = $1 and version = $3
+         returning version`,
+        [id, JSON.stringify(cv), version],
       )
-      return rowCount === 1
+      if (rows[0]) return { version: rows[0].version }
+      const { rowCount } = await pool.query('select 1 from cvs where id = $1', [id])
+      return rowCount ? 'conflict' : 'not-found'
     },
 
     async create(id, cv) {

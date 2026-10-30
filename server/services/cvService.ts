@@ -3,7 +3,7 @@ import type { PdfImporter } from '../import/pdfImporter.ts'
 import type { PdfRenderer } from '../pdf/pdfRenderer.ts'
 import type { CvRepository } from '../repository/cvRepository.ts'
 import { missingValue } from '../import/parseCv.ts'
-import { CvNotFoundError } from './errors.ts'
+import { CvConflictError, CvNotFoundError } from './errors.ts'
 
 function slugify(parts: string[]) {
   return (
@@ -42,8 +42,11 @@ export function createCvService(
       }))
     },
 
-    async replace(id: string, cv: UserData) {
-      if (!(await repository.update(id, cv))) throw new CvNotFoundError(id)
+    async replace(id: string, cv: UserData, version: number) {
+      const result = await repository.update(id, cv, version)
+      if (result === 'not-found') throw new CvNotFoundError(id)
+      if (result === 'conflict') throw new CvConflictError()
+      return result.version
     },
 
     async delete(id: string) {

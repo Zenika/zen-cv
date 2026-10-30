@@ -1,5 +1,14 @@
 import type { CurrentUser, CvSummary, UserData } from '../types'
 
+export class RequestError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 async function request(url: string, init?: RequestInit) {
   let response: Response
   try {
@@ -7,18 +16,24 @@ async function request(url: string, init?: RequestInit) {
   } catch {
     throw new Error('le serveur est injoignable.')
   }
-  if (!response.ok) throw new Error((await response.text()) || `erreur ${response.status}.`)
+  if (!response.ok)
+    throw new RequestError((await response.text()) || `erreur ${response.status}.`, response.status)
   return response
 }
 
-async function requestJson<T>(url: string): Promise<T> {
-  const response = await request(url)
+async function readJson<T>(response: Response): Promise<T> {
   try {
     return await response.json()
   } catch {
     throw new Error('les données reçues ne sont pas un JSON valide.')
   }
 }
+
+async function requestJson<T>(url: string): Promise<T> {
+  return readJson<T>(await request(url))
+}
+
+export const isConflict = (error: unknown) => error instanceof RequestError && error.status === 412
 
 const cvUrl = (id: string) => `/api/cvs/${encodeURIComponent(id)}`
 
@@ -30,16 +45,18 @@ export function getCvs() {
   return requestJson<CvSummary[]>('/api/cvs')
 }
 
-export function getCv(id: string) {
-  return requestJson<UserData>(cvUrl(id))
+export async function getCv(id: string) {
+  const response = await request(cvUrl(id))
+  return { cv: await readJson<UserData>(response), version: response.headers.get('ETag') ?? '' }
 }
 
-export async function saveCv(id: string, cv: UserData) {
-  await request(cvUrl(id), {
+export async function saveCv(id: string, cv: UserData, version: string) {
+  const response = await request(cvUrl(id), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'If-Match': version },
     body: JSON.stringify(cv),
   })
+  return response.headers.get('ETag') ?? ''
 }
 
 export async function deleteCv(id: string) {

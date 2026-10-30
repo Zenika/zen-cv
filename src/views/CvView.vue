@@ -11,9 +11,10 @@ import { deleteCv, errorMessage } from '../service/cvApi'
 
 const props = defineProps<{ id: string }>()
 
-const { cv, loadError, load, saveError, save, exportError, isExporting, exportPdf } = useCv(
-  props.id,
-)
+const { cv, loadError, load, saveError, conflict, save, exportError, isExporting, exportPdf } =
+  useCv(props.id)
+
+const reload = () => location.reload()
 
 const importWarnings = ref<string[] | null>(history.state?.importWarnings ?? null)
 
@@ -155,9 +156,17 @@ onMounted(load)
         </button>
       </div>
       <div v-if="saveError" class="cv-page__error" role="alert">
-        <p class="cv-page__error-message">
-          <strong>L'enregistrement a échoué :</strong> {{ saveError }}
-        </p>
+        <div class="cv-page__error-message">
+          <p><strong>L'enregistrement a échoué :</strong> {{ saveError }}</p>
+          <button
+            v-if="conflict"
+            type="button"
+            class="button button--primary cv-page__reload"
+            @click="reload"
+          >
+            Recharger le CV
+          </button>
+        </div>
         <button type="button" class="icon-button" aria-label="Fermer" @click="saveError = null">
           <XIcon :size="18" />
         </button>
@@ -286,6 +295,10 @@ onMounted(load)
     padding-left: 20px;
     margin-top: 8px;
     list-style: disc;
+  }
+
+  &__reload {
+    margin-top: 8px;
   }
 
   &__error-message {
