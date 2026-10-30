@@ -22,7 +22,7 @@ describe('createDirectoryLookup', () => {
         { headers: { 'Metadata-Flavor': 'Google' } },
       ],
       [
-        'https://admin.googleapis.com/admin/directory/v1/users/raphael.grand%40zenika.com?viewType=domain_public&fields=name',
+        'https://admin.googleapis.com/admin/directory/v1/users/raphael.grand%40zenika.com?fields=name',
         { headers: { Authorization: 'Bearer directory-token' } },
       ],
     ])

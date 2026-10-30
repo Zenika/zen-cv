@@ -19,7 +19,7 @@ export function createDirectoryLookup(fetcher: typeof fetch = fetch): NameLookup
     )
     const user = await readJson<{ name?: { fullName?: string } }>(
       await fetcher(
-        `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}?viewType=domain_public&fields=name`,
+        `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}?fields=name`,
         { headers: { Authorization: `Bearer ${access_token}` } },
       ),
       'annuaire Google Workspace',
