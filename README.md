@@ -57,6 +57,8 @@ Then open http://localhost:5173.
 | `TEST_DATABASE_URL` | tests | Optional for unit tests: turns on the Postgres tests, which run in a temporary schema dropped afterwards. Required for `pnpm test:e2e`, which uses the `e2e` schema. |
 | `PORT` | start | HTTP port. Default `3000`; Cloud Run sets `8080`. |
 | `STATIC_ROOT` | start | Folder containing the built front end. Default `dist`. |
+| `IAP_AUDIENCE` | production | Expected audience of the IAP token, `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE`. Set by the deploy workflow. When it is set, every `/api` call must carry a valid IAP token. |
+| `DEV_USER_EMAIL` | dev, start | Signed-in user when `IAP_AUDIENCE` is not set. Default `dev@localhost`. In production (`NODE_ENV=production`) the server refuses to start without `IAP_AUDIENCE`, unless this is set. |
 
 `.env.local` is ignored by git. Never commit a connection string.
 
@@ -161,14 +163,26 @@ The back end is [Hono](https://hono.dev/) on Node.js (`@hono/node-server`), with
 
 ### API
 
-All routes are under `/api`. Errors are returned as plain text in French.
+All routes are under `/api`. Errors are returned as plain text in French. Every route answers `401` without a signed-in user (see [Authentication](#authentication)).
 
 | Method | Path | Response |
 | --- | --- | --- |
+| `GET` | `/api/me` | `200`: the signed-in user, `{ email, name }` (name from the Workspace directory) |
 | `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title }` |
+| `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
 | `GET` | `/api/cvs/:id` | `200`: the full CV · `404` |
 | `PUT` | `/api/cvs/:id` | Replaces the whole CV. `204` · `400` if the body is invalid · `404` |
+| `DELETE` | `/api/cvs/:id` | `204` · `404` |
 | `GET` | `/api/cvs/:id/pdf` | `200`: `application/pdf` · `404` · `500` if the export fails |
+
+### Authentication
+
+In production, IAP signs in the user before any request reaches the app, and adds a signed token, `x-goog-iap-jwt-assertion`. `server/auth/identity.ts` checks its signature (Google's public keys), issuer and audience (`IAP_AUDIENCE`), then reads the email. The plain `x-goog-authenticated-user-email` header is never trusted.
+
+- The full name comes from the Google Workspace directory (`server/auth/directory.ts`). The runtime service account has a read-only Workspace admin role (Users > Read): the app asks Cloud Run's metadata server for a token with the `admin.directory.user.readonly` scope and reads the user's public profile. Names are cached for 12 hours. If the directory can't be reached, the name is built from the address (`prenom.nom@…` → "Prenom Nom", without accents), the reason is logged (`nom de … introuvable dans l’annuaire`) and the directory is asked again 5 minutes later.
+- Locally and in the e2e tests there is no IAP: the user is `DEV_USER_EMAIL` (default `dev@localhost`).
+- The PDF export loads the CV page from inside the container, without IAP. It sends a random token generated when the server starts (`x-zen-cv-internal-token`), which no one outside the process knows.
+- When a token is refused, the server logs the audience it received and the one it expected. If every call answers `401` after a deploy, compare the two in the Cloud Run logs and fix `IAP_AUDIENCE`.
 
 ### Layers
 
@@ -308,7 +322,7 @@ When the container runs in Docker on Linux, `localhost` points to the container 
 
 ### Setting up a new GCP project
 
-These scripts are run once, by hand. Both are safe to run again.
+These scripts are run once, by hand. All are safe to run again.
 
 1. `deploy/setup-gcp.sh` sets up the project:
    - enables the APIs and creates the Artifact Registry repository;
@@ -317,6 +331,7 @@ These scripts are run once, by hand. Both are safe to run again.
    - prints the GitHub variables to set.
 2. Deploy once, by pushing to `main` or running the workflow manually.
 3. `deploy/enable-iap.sh` turns on IAP and grants access to the `zenika.com` domain.
+4. `deploy/enable-directory.sh` lets the app read users' full names (see [Authentication](#authentication)). It enables the Admin SDK API, then prints the last step for a Workspace super admin: create an admin role with only **Admin API privileges → Users → Read**, and assign it to the `zen-cv-run` service account.
 
 The Zenika organisation only allows resources in approved regions (`constraints/gcp.resourceLocations`). Anything that would default to `global` must be pinned to `europe-west9`.
 

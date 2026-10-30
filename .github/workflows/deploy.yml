@@ -78,6 +78,12 @@ jobs:
       - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
       - run: docker build --tag "$IMAGE" .
       - run: docker push "$IMAGE"
+      - name: Compute the IAP audience
+        env:
+          PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+        run: |
+          project_number="$(echo "$PROVIDER" | cut -d/ -f2)"
+          echo "IAP_AUDIENCE=/projects/$project_number/locations/$REGION/services/$SERVICE" >> "$GITHUB_ENV"
       - run: >-
           gcloud run deploy "$SERVICE"
           --project "${{ vars.GCP_PROJECT_ID }}"
@@ -86,6 +92,7 @@ jobs:
           --service-account "${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}"
           --add-cloudsql-instances "${{ vars.CLOUD_SQL_CONNECTION_NAME }}"
           --set-secrets DATABASE_URL=zen-cv-database-url:latest
+          --set-env-vars "IAP_AUDIENCE=$IAP_AUDIENCE"
           --no-allow-unauthenticated
           --memory 2Gi
           --cpu 1

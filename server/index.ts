@@ -11,6 +11,9 @@ const { app, migrate, close } = createServerApp({
   databaseUrl: process.env.DATABASE_URL,
   logoFile: resolve(staticRoot, 'images/zenika.png'),
   baseUrl: () => `http://localhost:${port}/`,
+  iapAudience: process.env.IAP_AUDIENCE,
+  devUserEmail: process.env.DEV_USER_EMAIL,
+  production: process.env.NODE_ENV === 'production',
 })
 
 await migrate()

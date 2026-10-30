@@ -10,9 +10,10 @@ export type PdfRenderer = {
 type PdfRendererOptions = {
   baseUrl: () => string
   logoFile: string
+  headers: Record<string, string>
 }
 
-export function createPdfRenderer({ baseUrl, logoFile }: PdfRendererOptions): PdfRenderer {
+export function createPdfRenderer({ baseUrl, logoFile, headers }: PdfRendererOptions): PdfRenderer {
   let browser: Promise<Browser> | undefined
 
   function getBrowser() {
@@ -29,7 +30,7 @@ export function createPdfRenderer({ baseUrl, logoFile }: PdfRendererOptions): Pd
 
   return {
     async render(id) {
-      const context = await (await getBrowser()).newContext()
+      const context = await (await getBrowser()).newContext({ extraHTTPHeaders: headers })
       try {
         const page = await context.newPage()
         await page.goto(new URL(`cv/${encodeURIComponent(id)}`, baseUrl()).href)
