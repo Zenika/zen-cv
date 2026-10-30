@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { UserData } from '../../shared/cv.ts'
 import { createApp } from '../app.ts'
+import type { Identity } from '../auth/identity.ts'
 import type { ParsedCv } from '../import/parseCv.ts'
 import { CvImportError } from '../services/errors.ts'
 import { readSeed, seedFile } from '../db/seed.ts'
@@ -15,6 +16,7 @@ let repository: CvRepository
 let app: ReturnType<typeof createApp>
 let renderedIds: string[]
 let parsed: ParsedCv | Error
+let identity: Identity
 
 function put(id: string, body: unknown) {
   return app.request(`/api/cvs/${id}`, {
@@ -41,7 +43,38 @@ beforeEach(async () => {
       return structuredClone(parsed)
     },
   }
-  app = createApp(createCvService(repository, pdfRenderer, pdfImporter))
+  identity = async () => ({ email: 'camille.martin@zenika.com', name: 'Camille Martin' })
+  app = createApp(createCvService(repository, pdfRenderer, pdfImporter), (headers) =>
+    identity(headers),
+  )
+})
+
+describe('authentication', () => {
+  it('returns the signed-in user', async () => {
+    const response = await app.request('/api/me')
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      email: 'camille.martin@zenika.com',
+      name: 'Camille Martin',
+    })
+  })
+
+  it('refuses every API call without a signed-in user', async () => {
+    identity = async () => null
+    for (const [method, path] of [
+      ['GET', '/api/me'],
+      ['GET', '/api/cvs'],
+      ['DELETE', '/api/cvs/camille-martin'],
+      ['GET', '/api/inconnu'],
+    ] as const) {
+      const response = await app.request(path, { method })
+      expect(response.status).toBe(401)
+      expect(await response.text()).toBe(
+        'authentification requise : rechargez la page pour vous reconnecter.',
+      )
+    }
+    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+  })
 })
 
 describe('seed data', () => {

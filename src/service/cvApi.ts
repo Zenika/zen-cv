@@ -1,4 +1,4 @@
-import type { CvSummary, UserData } from '../types'
+import type { CurrentUser, CvSummary, UserData } from '../types'
 
 async function request(url: string, init?: RequestInit) {
   let response: Response
@@ -21,6 +21,10 @@ async function requestJson<T>(url: string): Promise<T> {
 }
 
 const cvUrl = (id: string) => `/api/cvs/${encodeURIComponent(id)}`
+
+export function getCurrentUser() {
+  return requestJson<CurrentUser>('/api/me')
+}
 
 export function getCvs() {
   return requestJson<CvSummary[]>('/api/cvs')
