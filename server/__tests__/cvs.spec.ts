@@ -3,6 +3,8 @@ import { isDeepStrictEqual } from 'node:util'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { UserData } from '../../shared/cv.ts'
 import { createApp } from '../app.ts'
+import type { ParsedCv } from '../import/parseCv.ts'
+import { CvImportError } from '../services/errors.ts'
 import { readSeed, seedFile } from '../db/seed.ts'
 import type { CvRepository } from '../repository/cvRepository.ts'
 import { createCvService } from '../services/cvService.ts'
@@ -12,6 +14,7 @@ let seedData: Record<string, UserData>
 let repository: CvRepository
 let app: ReturnType<typeof createApp>
 let renderedIds: string[]
+let parsed: ParsedCv | Error
 
 function put(id: string, body: unknown) {
   return app.request(`/api/cvs/${id}`, {
@@ -31,7 +34,14 @@ beforeEach(async () => {
       return new TextEncoder().encode('%PDF-fake')
     },
   }
-  app = createApp(createCvService(repository, pdfRenderer))
+  parsed = { cv: seedData['camille-martin']!, warnings: ['Bloc des compétences introuvable.'] }
+  const pdfImporter = {
+    async import() {
+      if (parsed instanceof Error) throw parsed
+      return structuredClone(parsed)
+    },
+  }
+  app = createApp(createCvService(repository, pdfRenderer, pdfImporter))
 })
 
 describe('seed data', () => {
@@ -98,6 +108,21 @@ describe('PUT /api/cvs/:id', () => {
   })
 })
 
+describe('DELETE /api/cvs/:id', () => {
+  it('deletes the CV', async () => {
+    const response = await app.request('/api/cvs/camille-martin', { method: 'DELETE' })
+    expect(response.status).toBe(204)
+    expect(await repository.get('camille-martin')).toBeUndefined()
+    expect(await repository.get('raphael-grand')).toEqual(seedData['raphael-grand'])
+  })
+
+  it('answers 404 for an unknown CV', async () => {
+    const response = await app.request('/api/cvs/inconnu', { method: 'DELETE' })
+    expect(response.status).toBe(404)
+    expect((await repository.list()).length).toBe(Object.keys(seedData).length)
+  })
+})
+
 describe('GET /api/cvs/:id/pdf', () => {
   it('returns the rendered PDF as a download', async () => {
     const response = await app.request('/api/cvs/camille-martin/pdf')
@@ -113,6 +138,53 @@ describe('GET /api/cvs/:id/pdf', () => {
     const response = await app.request('/api/cvs/inconnu/pdf')
     expect(response.status).toBe(404)
     expect(renderedIds).toEqual([])
+  })
+})
+
+describe('POST /api/cvs/import', () => {
+  const importPdf = (body: string | Uint8Array<ArrayBuffer>) =>
+    app.request('/api/cvs/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/pdf' },
+      body,
+    })
+
+  it('creates the CV under a free id and returns the warnings', async () => {
+    const response = await importPdf('%PDF-1.7 fake')
+    expect(response.status).toBe(201)
+    expect(await response.json()).toEqual({
+      id: 'camille-martin-2',
+      warnings: ['Bloc des compétences introuvable.'],
+    })
+    expect(await repository.get('camille-martin-2')).toEqual(seedData['camille-martin'])
+    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+  })
+
+  it('leaves an unknown name out of the id', async () => {
+    parsed = {
+      cv: { ...seedData['camille-martin']!, firstname: 'Élise', name: 'À compléter' },
+      warnings: [],
+    }
+    expect(await (await importPdf('%PDF-1.7 fake')).json()).toEqual({ id: 'elise', warnings: [] })
+  })
+
+  it('rejects a file that is not a PDF', async () => {
+    const response = await importPdf('bonjour')
+    expect(response.status).toBe(400)
+    expect(await response.text()).toBe('le fichier envoyé n’est pas un PDF.')
+  })
+
+  it('rejects a PDF over 10 MB', async () => {
+    const response = await importPdf(new Uint8Array(10 * 1024 * 1024 + 1))
+    expect(response.status).toBe(413)
+  })
+
+  it('answers 422 when the PDF cannot be imported', async () => {
+    parsed = new CvImportError('le PDF ne contient aucun texte.')
+    const response = await importPdf('%PDF-1.7 fake')
+    expect(response.status).toBe(422)
+    expect(await response.text()).toBe('le PDF ne contient aucun texte.')
+    expect((await repository.list()).length).toBe(Object.keys(seedData).length)
   })
 })
 

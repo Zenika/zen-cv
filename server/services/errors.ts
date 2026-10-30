@@ -11,3 +11,10 @@ export class PdfExportError extends Error {
     this.name = 'PdfExportError'
   }
 }
+
+export class CvImportError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CvImportError'
+  }
+}

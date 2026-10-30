@@ -24,6 +24,7 @@ export const cvSchema = z.object({
   expertise: z.array(z.object({ name: z.string(), level: z.string() })),
   methodologies: z.array(z.string()),
   trainer: z.array(z.string()),
+  certifications: z.array(z.string()).default([]),
   experiences: z.array(experienceSchema),
   education: z.array(z.object({ period: z.string(), title: z.string(), school: z.string() })),
   languages: z.array(z.object({ name: z.string(), level: z.string() })),

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import { errorMessage, getCvs } from '../service/cvApi'
+import { RouterLink, useRouter } from 'vue-router'
+import { errorMessage, getCvs, importCvPdf } from '../service/cvApi'
 import type { CvSummary } from '../types'
 
 const cvs = ref<CvSummary[] | null>(null)
@@ -16,13 +16,54 @@ async function loadCvs() {
   }
 }
 
+const router = useRouter()
+const fileInput = ref<HTMLInputElement | null>(null)
+const isImporting = ref(false)
+const importError = ref<string | null>(null)
+
+async function importPdf() {
+  const file = fileInput.value?.files?.[0]
+  if (!file) return
+  isImporting.value = true
+  importError.value = null
+  try {
+    const { id, warnings } = await importCvPdf(file)
+    await router.push({
+      path: `/cv/${encodeURIComponent(id)}`,
+      state: { importWarnings: warnings },
+    })
+  } catch (error) {
+    importError.value = errorMessage(error)
+  } finally {
+    isImporting.value = false
+    fileInput.value!.value = ''
+  }
+}
+
 onMounted(loadCvs)
 </script>
 
 <template>
   <div class="cv">
     <main class="home">
-      <h1 class="home__title">Les CV</h1>
+      <div class="home__header">
+        <h1 class="home__title">Les CV</h1>
+        <label class="button button--primary home__import" :aria-disabled="isImporting">
+          {{ isImporting ? 'Import en cours…' : 'Importer un PDF' }}
+          <input
+            ref="fileInput"
+            type="file"
+            accept="application/pdf"
+            class="home__file"
+            :disabled="isImporting"
+            @change="importPdf"
+          />
+        </label>
+      </div>
+
+      <p v-if="importError" class="home__import-error" role="alert">
+        <strong>Le PDF n'a pas pu être importé :</strong> {{ importError }}
+      </p>
 
       <div v-if="loadError" class="load-error" role="alert">
         <p class="load-error__message">
@@ -55,8 +96,45 @@ onMounted(loadCvs)
   padding: 32px $gutter;
   margin: 0 auto;
 
-  &__title {
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 24px;
+  }
+
+  &__import {
+    position: relative;
+    cursor: pointer;
+
+    &:focus-within {
+      outline: 2px solid $text;
+      outline-offset: 2px;
+    }
+
+    &[aria-disabled='true'] {
+      cursor: progress;
+      opacity: 0.7;
+    }
+  }
+
+  &__import-error {
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    border-left: 4px solid $red;
+  }
+
+  &__file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  &__title {
     font-family: $font-heading;
     font-size: 32px;
     font-weight: 400;

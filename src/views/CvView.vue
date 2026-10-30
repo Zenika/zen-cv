@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { PencilIcon, XIcon } from '@lucide/vue'
-import { onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { onMounted, ref, useTemplateRef } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import CvExperiences from '../components/CvExperiences.vue'
 import CvHeader from '../components/CvHeader.vue'
 import CvSkills from '../components/CvSkills.vue'
 import InlineEdit from '../components/InlineEdit.vue'
 import { useCv } from '../composables/useCv'
+import { deleteCv, errorMessage } from '../service/cvApi'
 
 const props = defineProps<{ id: string }>()
 
@@ -14,19 +15,63 @@ const { cv, loadError, load, saveError, save, exportError, isExporting, exportPd
   props.id,
 )
 
+const importWarnings = ref<string[] | null>(history.state?.importWarnings ?? null)
+
+const router = useRouter()
+const deleteDialog = useTemplateRef('deleteDialog')
+const isDeleting = ref(false)
+const deleteError = ref<string | null>(null)
+
+async function remove() {
+  isDeleting.value = true
+  deleteError.value = null
+  try {
+    await deleteCv(props.id)
+    deleteDialog.value?.close()
+    await router.push('/')
+  } catch (error) {
+    deleteError.value = errorMessage(error)
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
 <template>
   <div class="cv cv-page" v-if="cv">
-    <button
-      type="button"
-      class="button button--primary cv-page__export"
-      :disabled="isExporting"
-      @click="exportPdf"
-    >
-      {{ isExporting ? 'Export en cours…' : 'Export PDF' }}
-    </button>
+    <div class="cv-page__actions">
+      <button type="button" class="button" @click="deleteDialog?.showModal()">
+        Supprimer le CV
+      </button>
+      <button
+        type="button"
+        class="button button--primary"
+        :disabled="isExporting"
+        @click="exportPdf"
+      >
+        {{ isExporting ? 'Export en cours…' : 'Export PDF' }}
+      </button>
+    </div>
+
+    <dialog ref="deleteDialog" class="dialog" @close="deleteError = null">
+      <form method="dialog" @submit.prevent="remove">
+        <p class="dialog__text">
+          Supprimer définitivement le CV de
+          <strong>{{ cv.firstname }} {{ cv.name }}</strong> ?
+        </p>
+        <p v-if="deleteError" class="dialog__text dialog__text--error" role="alert">
+          La suppression a échoué : {{ deleteError }}
+        </p>
+        <div class="dialog__actions">
+          <button type="button" class="button" autofocus @click="deleteDialog?.close()">
+            Annuler
+          </button>
+          <button class="button button--primary" :disabled="isDeleting">Supprimer</button>
+        </div>
+      </form>
+    </dialog>
 
     <CvHeader :cv="cv" :save="save" />
 
@@ -68,7 +113,8 @@ onMounted(load)
         <div class="row__content">
           <p v-for="education in cv.education" :key="education.title">
             {{ education.period }} <strong>{{ education.title }}</strong
-            >, {{ education.school }}.
+            ><template v-if="education.school">, {{ education.school }}</template
+            >.
           </p>
         </div>
       </section>
@@ -80,7 +126,7 @@ onMounted(load)
           <p>
             <template v-for="(language, index) in cv.languages" :key="language.name">
               <template v-if="index">, </template>
-              {{ language.name }} ({{ language.level }})
+              {{ language.name }}<template v-if="language.level"> ({{ language.level }})</template>
             </template>
           </p>
         </div>
@@ -92,6 +138,22 @@ onMounted(load)
     </footer>
 
     <div class="cv-page__errors">
+      <div v-if="importWarnings" class="cv-page__error cv-page__error--notice" role="status">
+        <div class="cv-page__error-message">
+          <p><strong>CV importé depuis le PDF.</strong> Vérifiez son contenu.</p>
+          <ul v-if="importWarnings.length" class="cv-page__warnings">
+            <li v-for="warning in importWarnings" :key="warning">{{ warning }}</li>
+          </ul>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="Fermer"
+          @click="importWarnings = null"
+        >
+          <XIcon :size="18" />
+        </button>
+      </div>
       <div v-if="saveError" class="cv-page__error" role="alert">
         <p class="cv-page__error-message">
           <strong>L'enregistrement a échoué :</strong> {{ saveError }}
@@ -127,10 +189,12 @@ onMounted(load)
 @use '@/styles/variables' as *;
 
 .cv-page {
-  &__export {
+  &__actions {
     position: absolute;
     top: 20px;
     right: $gutter;
+    display: flex;
+    gap: 8px;
   }
 
   &__intro {
@@ -212,6 +276,16 @@ onMounted(load)
     border-left: 4px solid $red;
     border-radius: 4px;
     box-shadow: 0 4px 24px rgb(0 0 0 / 20%);
+  }
+
+  &__error--notice {
+    border-left-color: $text;
+  }
+
+  &__warnings {
+    padding-left: 20px;
+    margin-top: 8px;
+    list-style: disc;
   }
 
   &__error-message {
