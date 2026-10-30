@@ -117,3 +117,25 @@ test('refuses to overwrite a change made in another window', async ({ browser })
   )
   await Promise.all([mine.close(), theirs.close()])
 })
+
+test('searches the CVs by name and keeps the search when coming back', async ({ page }) => {
+  await page.goto('/')
+  const cards = page.locator('.home__list').getByRole('link')
+  await expect(cards).toHaveText([/Raphaël\s+Grand/i, /Camille\s+Martin/i])
+
+  const search = page.getByRole('searchbox', { name: 'Rechercher un CV par nom' })
+  await search.pressSequentially('cam')
+  await expect(search).toBeFocused()
+  await expect(search).toHaveValue('cam')
+  await expect(cards).toHaveText([/Camille\s+Martin/i])
+  await expect(page).toHaveURL('/?q=cam')
+
+  await cards.first().click()
+  await expect(page).toHaveURL('/cv/camille-martin')
+  await page.goBack()
+  await expect(page.getByRole('searchbox', { name: 'Rechercher un CV par nom' })).toHaveValue('cam')
+  await expect(cards).toHaveText([/Camille\s+Martin/i])
+
+  await page.getByRole('searchbox', { name: 'Rechercher un CV par nom' }).fill('personne')
+  await expect(page.getByText('Aucun CV ne correspond à « personne ».')).toBeVisible()
+})

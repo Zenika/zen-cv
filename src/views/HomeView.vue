@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
-import { isSameName } from '../../shared/names.ts'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { isSameName, matchesSearch } from '../../shared/names.ts'
 import { useCurrentUser } from '../composables/useCurrentUser'
 import { claimCv, errorMessage, getCvs, importCvPdf } from '../service/cvApi'
 import type { CvSummary } from '../types'
 
 const cvs = ref<CvSummary[] | null>(null)
 const loadError = ref<string | null>(null)
+
+const route = useRoute()
+const router = useRouter()
+const query = computed({
+  get: () => (typeof route.query.q === 'string' ? route.query.q : ''),
+  set: (q) => router.replace({ query: q ? { q } : {} }),
+})
+const filteredCvs = computed(() => cvs.value?.filter((cv) => matchesSearch(query.value, cv)) ?? [])
 
 async function loadCvs() {
   loadError.value = null
@@ -51,7 +59,6 @@ function skipWelcome() {
   skipped.value = true
 }
 
-const router = useRouter()
 const isImporting = ref(false)
 const importError = ref<string | null>(null)
 
@@ -103,7 +110,7 @@ onMounted(loadCvs)
             <li v-for="cv in candidates" :key="cv.id" class="home__candidate">
               <RouterLink :to="`/cv/${encodeURIComponent(cv.id)}`" class="home__candidate-link">
                 {{ cv.firstname }} {{ cv.name }}</RouterLink
-              ><template v-if="cv.title"> · {{ cv.title }}</template>
+              >
               <button type="button" class="button button--primary" @click="claim(cv)">
                 C'est mon CV
               </button>
@@ -146,17 +153,32 @@ onMounted(loadCvs)
         </button>
       </div>
 
-      <ul v-else-if="cvs" class="home__list">
-        <li v-for="cv in cvs" :key="cv.id">
-          <RouterLink :to="`/cv/${encodeURIComponent(cv.id)}`" class="card home__card">
-            <span class="home__name">
-              {{ cv.firstname }} <span class="home__lastname">{{ cv.name }}</span>
-            </span>
-            <span class="home__job">{{ cv.title }}</span>
-            <span v-if="isMine(cv)" class="home__mine">Mon CV</span>
-          </RouterLink>
-        </li>
-      </ul>
+      <template v-else-if="cvs">
+        <div class="home__search">
+          <input
+            v-model="query"
+            type="search"
+            class="home__search-input"
+            aria-label="Rechercher un CV par nom"
+            placeholder="Rechercher un CV par nom…"
+          />
+          <p class="home__count" aria-live="polite">
+            {{ filteredCvs.length }} CV{{ filteredCvs.length > 1 ? 's' : '' }}
+          </p>
+        </div>
+
+        <ul v-if="filteredCvs.length" class="home__list">
+          <li v-for="cv in filteredCvs" :key="cv.id">
+            <RouterLink :to="`/cv/${encodeURIComponent(cv.id)}`" class="card home__card">
+              <span class="home__name">
+                {{ cv.firstname }} <span class="home__lastname">{{ cv.name }}</span>
+              </span>
+              <span v-if="isMine(cv)" class="home__mine">Mon CV</span>
+            </RouterLink>
+          </li>
+        </ul>
+        <p v-else class="home__empty">Aucun CV ne correspond à « {{ query }} ».</p>
+      </template>
     </main>
   </div>
 </template>
@@ -264,8 +286,30 @@ onMounted(loadCvs)
     text-transform: uppercase;
   }
 
-  &__job {
-    color: #555;
+  &__search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  &__search-input {
+    flex: 0 1 420px;
+    min-width: 0;
+    padding: 8px 12px;
+    font: inherit;
+    color: inherit;
+    border: 1px solid $border;
+    border-radius: 4px;
+  }
+
+  &__count {
+    color: $muted;
+  }
+
+  &__empty {
+    color: $muted;
   }
 
   &__mine {
