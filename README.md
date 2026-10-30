@@ -169,11 +169,15 @@ All routes are under `/api`. Errors are returned as plain text in French. Every 
 | --- | --- | --- |
 | `GET` | `/api/me` | `200`: the signed-in user, `{ email, name }` (name from the Workspace directory) |
 | `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title }` |
-| `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
+| `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. With `?owner=me`, the CV is the signed-in user's: if the PDF's name doesn't match their account (accents, case and word order aside), the account's name is used instead. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
 | `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header · `404` |
 | `PUT` | `/api/cvs/:id` | Replaces the whole CV. Needs `If-Match` with the version it replaces. `204` with the new version in `ETag` · `400` if the body is invalid · `404` · `412` if someone saved the CV in the meantime · `428` without `If-Match` |
 | `DELETE` | `/api/cvs/:id` | `204` · `404` |
 | `GET` | `/api/cvs/:id/pdf` | `200`: `application/pdf` · `404` · `500` if the export fails |
+
+### First visit
+
+When no CV matches the signed-in user's name (`shared/names.ts`: accents, case and word order are ignored), the home page offers to import their CV, with `?owner=me`. "Plus tard" is remembered in the browser's `localStorage`, per email. The e2e tests run as `jeanne.leroy@zenika.com` (`DEV_USER_EMAIL` in `playwright.config.ts`).
 
 ### Concurrent edits
 

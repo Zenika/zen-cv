@@ -2,13 +2,13 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
-import { cvSchema } from '../../shared/cv.ts'
+import { cvSchema, type CurrentUser } from '../../shared/cv.ts'
 import type { CvService } from '../services/cvService.ts'
 
 const etag = (version: number) => `"${version}"`
 
 export function createCvRoutes(service: CvService) {
-  return new Hono()
+  return new Hono<{ Variables: { user: CurrentUser } }>()
     .get('/', async (c) => c.json(await service.list()))
     .post(
       '/import',
@@ -20,7 +20,8 @@ export function createCvRoutes(service: CvService) {
         const pdf = new Uint8Array(await c.req.arrayBuffer())
         if (new TextDecoder().decode(pdf.subarray(0, 5)) !== '%PDF-')
           return c.text('le fichier envoyé n’est pas un PDF.', 400)
-        return c.json(await service.importPdf(pdf), 201)
+        const owner = c.req.query('owner') === 'me' ? c.var.user : undefined
+        return c.json(await service.importPdf(pdf, owner), 201)
       },
     )
     .get('/:id', async (c) => {

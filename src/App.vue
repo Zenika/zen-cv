@@ -1,18 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
-import { getCurrentUser } from './service/cvApi'
-import type { CurrentUser } from './types'
+import { useCurrentUser } from './composables/useCurrentUser'
 
-const user = ref<CurrentUser | null>(null)
-
-onMounted(async () => {
-  try {
-    user.value = await getCurrentUser()
-  } catch {
-    user.value = null
-  }
-})
+const user = useCurrentUser()
 </script>
 
 <template>

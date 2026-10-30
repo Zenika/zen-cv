@@ -65,8 +65,8 @@ export async function deleteCv(id: string) {
 
 export type ImportedCv = { id: string; warnings: string[] }
 
-export async function importCvPdf(file: Blob): Promise<ImportedCv> {
-  const response = await request('/api/cvs/import', {
+export async function importCvPdf(file: Blob, { mine = false } = {}): Promise<ImportedCv> {
+  const response = await request(`/api/cvs/import${mine ? '?owner=me' : ''}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/pdf' },
     body: file,

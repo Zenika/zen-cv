@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { isSameName } from '../../shared/names.ts'
+import { useCurrentUser } from '../composables/useCurrentUser'
 import { errorMessage, getCvs, importCvPdf } from '../service/cvApi'
 import type { CvSummary } from '../types'
 
@@ -16,18 +18,35 @@ async function loadCvs() {
   }
 }
 
+const user = useCurrentUser()
+const skipKey = computed(() => `zen-cv:passer-import:${user.value?.email}`)
+const skipped = ref(false)
+const showWelcome = computed(
+  () =>
+    user.value !== null &&
+    cvs.value !== null &&
+    !skipped.value &&
+    localStorage.getItem(skipKey.value) === null &&
+    !cvs.value.some((cv) => isSameName(user.value!.name, cv)),
+)
+
+function skipWelcome() {
+  localStorage.setItem(skipKey.value, new Date().toISOString())
+  skipped.value = true
+}
+
 const router = useRouter()
-const fileInput = ref<HTMLInputElement | null>(null)
 const isImporting = ref(false)
 const importError = ref<string | null>(null)
 
-async function importPdf() {
-  const file = fileInput.value?.files?.[0]
+async function importPdf(event: Event, mine = false) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
   isImporting.value = true
   importError.value = null
   try {
-    const { id, warnings } = await importCvPdf(file)
+    const { id, warnings } = await importCvPdf(file, { mine })
     await router.push({
       path: `/cv/${encodeURIComponent(id)}`,
       state: { importWarnings: warnings },
@@ -36,7 +55,7 @@ async function importPdf() {
     importError.value = errorMessage(error)
   } finally {
     isImporting.value = false
-    fileInput.value!.value = ''
+    input.value = ''
   }
 }
 
@@ -51,15 +70,35 @@ onMounted(loadCvs)
         <label class="button button--primary home__import" :aria-disabled="isImporting">
           {{ isImporting ? 'Import en cours…' : 'Importer un PDF' }}
           <input
-            ref="fileInput"
             type="file"
             accept="application/pdf"
             class="home__file"
             :disabled="isImporting"
-            @change="importPdf"
+            @change="importPdf($event)"
           />
         </label>
       </div>
+
+      <section v-if="showWelcome" class="card home__welcome" aria-labelledby="welcome-title">
+        <h2 id="welcome-title" class="home__welcome-title">Bienvenue {{ user!.name }} !</h2>
+        <p>
+          Aucun CV à votre nom pour l'instant. Importez votre CV Zenika au format PDF : il sera
+          repris ici, prêt à être relu et complété.
+        </p>
+        <div class="home__welcome-actions">
+          <label class="button button--primary home__import" :aria-disabled="isImporting">
+            {{ isImporting ? 'Import en cours…' : 'Importer mon CV (PDF)' }}
+            <input
+              type="file"
+              accept="application/pdf"
+              class="home__file"
+              :disabled="isImporting"
+              @change="importPdf($event, true)"
+            />
+          </label>
+          <button type="button" class="button" @click="skipWelcome">Plus tard</button>
+        </div>
+      </section>
 
       <p v-if="importError" class="home__import-error" role="alert">
         <strong>Le PDF n'a pas pu être importé :</strong> {{ importError }}
@@ -118,6 +157,25 @@ onMounted(loadCvs)
       cursor: progress;
       opacity: 0.7;
     }
+  }
+
+  &__welcome {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-left: 4px solid $red;
+  }
+
+  &__welcome-title {
+    font-family: $font-heading;
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  &__welcome-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   &__import-error {
