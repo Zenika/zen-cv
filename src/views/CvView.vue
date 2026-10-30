@@ -5,8 +5,10 @@ import { RouterLink, useRouter } from 'vue-router'
 import CvExperiences from '../components/CvExperiences.vue'
 import CvHeader from '../components/CvHeader.vue'
 import CvSkills from '../components/CvSkills.vue'
+import CvVersions from '../components/CvVersions.vue'
 import InlineEdit from '../components/InlineEdit.vue'
 import { useCv } from '../composables/useCv'
+import { useCvVersions } from '../composables/useCvVersions'
 import { deleteCv, errorMessage } from '../service/cvApi'
 
 const props = defineProps<{ id: string }>()
@@ -24,6 +26,16 @@ const {
   exportPdf,
 } = useCv(props.id)
 
+const {
+  versions,
+  versionError,
+  mainId,
+  current,
+  load: loadVersions,
+  create: createVersion,
+  rename: renameVersion,
+} = useCvVersions(props.id)
+
 const reload = () => location.reload()
 
 const importWarnings = ref<string[] | null>(history.state?.importWarnings ?? null)
@@ -39,7 +51,7 @@ async function remove() {
   try {
     await deleteCv(props.id)
     deleteDialog.value?.close()
-    await router.push('/')
+    await router.push(current.value?.label ? `/cv/${encodeURIComponent(mainId.value)}` : '/')
   } catch (error) {
     deleteError.value = errorMessage(error)
   } finally {
@@ -47,14 +59,14 @@ async function remove() {
   }
 }
 
-onMounted(load)
+onMounted(() => Promise.all([load(), loadVersions()]))
 </script>
 
 <template>
   <div class="cv cv-page" v-if="cv">
     <div class="cv-page__actions">
       <button v-if="editable" type="button" class="button" @click="deleteDialog?.showModal()">
-        Supprimer le CV
+        {{ current?.label ? 'Supprimer la version' : 'Supprimer le CV' }}
       </button>
       <button
         type="button"
@@ -68,9 +80,17 @@ onMounted(load)
 
     <dialog ref="deleteDialog" class="dialog" @close="deleteError = null">
       <form method="dialog" @submit.prevent="remove">
-        <p class="dialog__text">
+        <p v-if="current?.label" class="dialog__text">
+          Supprimer définitivement la version <strong>{{ current.label }}</strong> du CV de
+          {{ cv.firstname }} {{ cv.name }} ?
+        </p>
+        <p v-else class="dialog__text">
           Supprimer définitivement le CV de
-          <strong>{{ cv.firstname }} {{ cv.name }}</strong> ?
+          <strong>{{ cv.firstname }} {{ cv.name }}</strong>
+          <template v-if="versions.length > 1">
+            et ses {{ versions.length - 1 }} version{{ versions.length > 2 ? 's' : '' }}</template
+          >
+          ?
         </p>
         <p v-if="deleteError" class="dialog__text dialog__text--error" role="alert">
           La suppression a échoué : {{ deleteError }}
@@ -85,6 +105,15 @@ onMounted(load)
     </dialog>
 
     <CvHeader :cv="cv" :editable="editable" :save="save" />
+
+    <CvVersions
+      :versions="versions"
+      :current-id="id"
+      :editable="editable"
+      :error="versionError"
+      :create="createVersion"
+      :rename="renameVersion"
+    />
 
     <div class="cv-page__intro">
       <div class="card cv-page__bio">

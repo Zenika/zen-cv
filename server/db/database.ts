@@ -23,4 +23,9 @@ export async function migrate(pool: pg.Pool) {
   await pool.query(
     'create unique index if not exists cvs_owner_email on cvs (owner_email) where owner_email is not null',
   )
+  await pool.query(
+    'alter table cvs add column if not exists source_id text references cvs (id) on delete cascade',
+  )
+  await pool.query('alter table cvs add column if not exists label text')
+  await pool.query('create index if not exists cvs_source_id on cvs (source_id)')
 }

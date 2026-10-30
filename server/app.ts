@@ -27,6 +27,7 @@ import {
   CvForbiddenError,
   CvImportError,
   CvOwnerError,
+  CvVersionError,
   CvNotFoundError,
   PdfExportError,
 } from './services/errors.ts'
@@ -52,6 +53,7 @@ export function createApp(service: CvService, identity: Identity) {
       if (error instanceof CvConflictError) return c.text(error.message, 412)
       if (error instanceof CvForbiddenError) return c.text(error.message, 403)
       if (error instanceof CvOwnerError) return c.text(error.message, 409)
+      if (error instanceof CvVersionError) return c.text(error.message, 409)
       if (error instanceof CvImportError) return c.text(error.message, 422)
       if (error instanceof PdfExportError) return c.text(error.message, 500)
       console.error(error)

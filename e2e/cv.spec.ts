@@ -139,3 +139,31 @@ test('searches the CVs by name and keeps the search when coming back', async ({ 
   await page.getByRole('searchbox', { name: 'Rechercher un CV par nom' }).fill('personne')
   await expect(page.getByText('Aucun CV ne correspond à « personne ».')).toBeVisible()
 })
+
+test('creates a labelled version of a CV, kept off the printed CV', async ({ page }) => {
+  await page.goto('/cv/camille-martin')
+  await page.getByRole('button', { name: 'Nouvelle version' }).click()
+  await page.getByLabel(/Label de la nouvelle version/).fill('Mission Banque')
+  await page.getByRole('button', { name: 'Créer' }).click()
+
+  await expect(page).toHaveURL('/cv/camille-martin-v2')
+  const versions = page.getByRole('navigation', { name: 'Versions du CV' })
+  await expect(versions.locator('[aria-current="page"]')).toHaveText('Mission Banque')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Camille\s+Martin/i)
+
+  await page.emulateMedia({ media: 'print' })
+  await expect(versions).toBeHidden()
+  await expect(page.getByText('Mission Banque')).toBeHidden()
+  await page.emulateMedia({ media: 'screen' })
+
+  await page.goto('/')
+  await expect(
+    page.locator('.home__list').getByRole('link', { name: /Camille Martin/i }),
+  ).toHaveCount(1)
+
+  await page.goto('/cv/camille-martin-v2')
+  await page.getByRole('button', { name: 'Supprimer la version' }).click()
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+  await expect(page).toHaveURL('/cv/camille-martin')
+  await expect(versions.getByRole('listitem')).toHaveCount(1)
+})
