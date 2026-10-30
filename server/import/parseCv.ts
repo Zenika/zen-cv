@@ -51,8 +51,8 @@ const capitalize = (word: string) =>
     .toLowerCase()
     .replace(/(^|[-'’])(\p{L})/gu, (_, start, letter) => start + letter.toUpperCase())
 
-function parseName(text: string, warnings: string[]) {
-  const words = text.split(' ')
+export function splitName(text: string) {
+  const words = text.split(' ').filter(Boolean)
   const lastnameIndex = words.findIndex(
     (word, index) => index > 0 && /\p{L}/u.test(word) && word === word.toUpperCase(),
   )
@@ -62,6 +62,12 @@ function parseName(text: string, warnings: string[]) {
       name: words.slice(lastnameIndex).map(capitalize).join(' '),
     }
   if (words.length > 1) return { firstname: words[0]!, name: words.slice(1).join(' ') }
+  return undefined
+}
+
+function parseName(text: string, warnings: string[]) {
+  const split = splitName(text)
+  if (split) return split
   warnings.push(`Le nom « ${text} » n'a pas pu être séparé du prénom.`)
   return { firstname: text || missingValue, name: missingValue }
 }

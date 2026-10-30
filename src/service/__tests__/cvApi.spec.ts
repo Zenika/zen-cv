@@ -76,6 +76,13 @@ describe('cvApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a%2Fb', { method: 'DELETE' })
   })
 
+  it('imports a PDF as the signed-in user own CV', async () => {
+    fetchMock.mockResolvedValue(Response.json({ id: 'a', warnings: [] }))
+    const file = new Blob(['%PDF'], { type: 'application/pdf' })
+    await importCvPdf(file, { mine: true })
+    expect(fetchMock).toHaveBeenCalledWith('/api/cvs/import?owner=me', expect.anything())
+  })
+
   it('returns the PDF as a blob', async () => {
     fetchMock.mockResolvedValue(
       new Response('%PDF', { headers: { 'Content-Type': 'application/pdf' } }),

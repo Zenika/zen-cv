@@ -200,8 +200,8 @@ describe('GET /api/cvs/:id/pdf', () => {
 })
 
 describe('POST /api/cvs/import', () => {
-  const importPdf = (body: string | Uint8Array<ArrayBuffer>) =>
-    app.request('/api/cvs/import', {
+  const importPdf = (body: string | Uint8Array<ArrayBuffer>, query = '') =>
+    app.request(`/api/cvs/import${query}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body,
@@ -216,6 +216,38 @@ describe('POST /api/cvs/import', () => {
     })
     expect(await stored('camille-martin-2')).toEqual(seedData['camille-martin'])
     expect(await stored('camille-martin')).toEqual(seedData['camille-martin'])
+  })
+
+  it('names a CV imported as mine after my account when the PDF names someone else', async () => {
+    parsed = {
+      cv: { ...seedData['camille-martin']!, firstname: 'JLE', name: 'À compléter' },
+      warnings: [
+        "Le nom « JLE » n'a pas pu être séparé du prénom.",
+        'Section « Langues » introuvable.',
+      ],
+    }
+    identity = async () => ({ email: 'jeanne.leroy@zenika.com', name: 'Jeanne LEROY' })
+    const response = await importPdf('%PDF-1.7 fake', '?owner=me')
+    expect(await response.json()).toEqual({
+      id: 'jeanne-leroy',
+      warnings: [
+        'Nom repris de votre compte : « Jeanne LEROY » (le PDF indiquait « JLE À compléter »).',
+        'Section « Langues » introuvable.',
+      ],
+    })
+    expect(await stored('jeanne-leroy')).toMatchObject({ firstname: 'Jeanne', name: 'Leroy' })
+  })
+
+  it('keeps the name of a CV imported as mine when it matches my account', async () => {
+    identity = async () => ({ email: 'camille.martin@zenika.com', name: 'CAMILLE MARTIN' })
+    const response = await importPdf('%PDF-1.7 fake', '?owner=me')
+    expect((await response.json()).warnings).toEqual(['Bloc des compétences introuvable.'])
+    expect(await stored('camille-martin-2')).toMatchObject({ firstname: 'Camille', name: 'Martin' })
+  })
+
+  it('ignores my account for a CV imported for someone else', async () => {
+    identity = async () => ({ email: 'jeanne.leroy@zenika.com', name: 'Jeanne LEROY' })
+    expect((await (await importPdf('%PDF-1.7 fake')).json()).id).toBe('camille-martin-2')
   })
 
   it('leaves an unknown name out of the id', async () => {

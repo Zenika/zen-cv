@@ -6,7 +6,7 @@ const companies = (page: Page) => page.locator('.experience-card__company')
 test('lists the CVs and opens one', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Les CV' })).toBeVisible()
-  await expect(page.getByText('Connecté en tant que Dev')).toBeVisible()
+  await expect(page.getByText('Connecté en tant que Jeanne Leroy')).toBeVisible()
   await page.getByRole('link', { name: /Camille Martin/i }).click()
 
   await expect(page).toHaveURL('/cv/camille-martin')

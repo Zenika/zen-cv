@@ -1,8 +1,9 @@
-import type { CvSummary, UserData } from '../../shared/cv.ts'
+import type { CurrentUser, CvSummary, UserData } from '../../shared/cv.ts'
+import { isSameName } from '../../shared/names.ts'
 import type { PdfImporter } from '../import/pdfImporter.ts'
 import type { PdfRenderer } from '../pdf/pdfRenderer.ts'
 import type { CvRepository } from '../repository/cvRepository.ts'
-import { missingValue } from '../import/parseCv.ts'
+import { missingValue, splitName } from '../import/parseCv.ts'
 import { CvConflictError, CvNotFoundError } from './errors.ts'
 
 function slugify(parts: string[]) {
@@ -53,8 +54,17 @@ export function createCvService(
       if (!(await repository.delete(id))) throw new CvNotFoundError(id)
     },
 
-    async importPdf(pdf: Uint8Array) {
-      const { cv, warnings } = await pdfImporter.import(pdf)
+    async importPdf(pdf: Uint8Array, owner?: CurrentUser) {
+      const imported = await pdfImporter.import(pdf)
+      let { cv, warnings } = imported
+      const ownerName = owner && splitName(owner.name)
+      if (ownerName && !isSameName(owner.name, cv)) {
+        cv = { ...cv, ...ownerName }
+        warnings = [
+          `Nom repris de votre compte : « ${owner.name} » (le PDF indiquait « ${imported.cv.firstname} ${imported.cv.name} »).`,
+          ...warnings.filter((warning) => !warning.startsWith('Le nom « ')),
+        ]
+      }
       const base = slugify([cv.firstname, cv.name].filter((part) => part !== missingValue))
       for (let attempt = 1; ; attempt++) {
         const id = attempt === 1 ? base : `${base}-${attempt}`

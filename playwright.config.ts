@@ -27,6 +27,10 @@ export default defineConfig({
     url: `http://localhost:${port}/api/cvs`,
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { PORT: String(port), DATABASE_URL: e2eDatabaseUrl(TEST_DATABASE_URL) },
+    env: {
+      PORT: String(port),
+      DATABASE_URL: e2eDatabaseUrl(TEST_DATABASE_URL),
+      DEV_USER_EMAIL: 'jeanne.leroy@zenika.com',
+    },
   },
 })
