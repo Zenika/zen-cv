@@ -25,5 +25,18 @@ export function createPostgresRepository(pool: pg.Pool): CvRepository {
       )
       return rowCount === 1
     },
+
+    async create(id, cv) {
+      const { rowCount } = await pool.query(
+        'insert into cvs (id, data) values ($1, $2) on conflict (id) do nothing',
+        [id, JSON.stringify(cv)],
+      )
+      return rowCount === 1
+    },
+
+    async delete(id) {
+      const { rowCount } = await pool.query('delete from cvs where id = $1', [id])
+      return rowCount === 1
+    },
   }
 }

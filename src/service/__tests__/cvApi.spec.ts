@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { errorMessage, getCv, getCvPdf, getCvs, saveCv } from '../cvApi'
+import { deleteCv, errorMessage, getCv, getCvPdf, getCvs, importCvPdf, saveCv } from '../cvApi'
 import type { UserData } from '../../types'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -33,8 +33,27 @@ describe('cvApi', () => {
     })
   })
 
+  it('sends the PDF to import and returns the new id with the warnings', async () => {
+    fetchMock.mockResolvedValue(Response.json({ id: 'a', warnings: ['Nom à vérifier.'] }))
+    const file = new Blob(['%PDF'], { type: 'application/pdf' })
+    expect(await importCvPdf(file)).toEqual({ id: 'a', warnings: ['Nom à vérifier.'] })
+    expect(fetchMock).toHaveBeenCalledWith('/api/cvs/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: file,
+    })
+  })
+
+  it('deletes the CV', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+    await deleteCv('a/b')
+    expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a%2Fb', { method: 'DELETE' })
+  })
+
   it('returns the PDF as a blob', async () => {
-    fetchMock.mockResolvedValue(new Response('%PDF', { headers: { 'Content-Type': 'application/pdf' } }))
+    fetchMock.mockResolvedValue(
+      new Response('%PDF', { headers: { 'Content-Type': 'application/pdf' } }),
+    )
     const pdf = await getCvPdf('a')
     expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a/pdf', undefined)
     expect(await pdf.text()).toBe('%PDF')

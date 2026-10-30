@@ -60,6 +60,32 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
     expect(after[0].updated_at.getTime()).toBeGreaterThan(before[0].updated_at.getTime())
   })
 
+  it('creates a CV only under a free id', async () => {
+    await seed(pool)
+    const repository = createPostgresRepository(pool)
+    const seedData = await readSeed()
+    const imported = { ...seedData['camille-martin']!, title: 'Importé' }
+    expect(await repository.create('camille-martin', imported)).toBe(false)
+    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+    expect(await repository.create('camille-martin-2', imported)).toBe(true)
+    expect(await repository.get('camille-martin-2')).toEqual(imported)
+  })
+
+  it('deletes an existing CV only', async () => {
+    await seed(pool)
+    const repository = createPostgresRepository(pool)
+    expect(await repository.delete('inconnu')).toBe(false)
+    expect(await repository.delete('camille-martin')).toBe(true)
+    expect(await repository.get('camille-martin')).toBeUndefined()
+    expect((await repository.list()).map(({ id }) => id)).toEqual(['raphael-grand'])
+  })
+
+  it('reads a CV stored before certifications existed', async () => {
+    const { certifications: _certifications, ...legacy } = (await readSeed())['camille-martin']!
+    await pool.query("insert into cvs (id, data) values ('ancien', $1)", [JSON.stringify(legacy)])
+    expect((await createPostgresRepository(pool).get('ancien'))!.certifications).toEqual([])
+  })
+
   it('keeps every change when updates run concurrently', async () => {
     await seed(pool)
     const repository = createPostgresRepository(pool)

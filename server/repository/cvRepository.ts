@@ -6,4 +6,6 @@ export type CvRepository = {
   list(): Promise<StoredCv[]>
   get(id: string): Promise<UserData | undefined>
   update(id: string, cv: UserData): Promise<boolean>
+  create(id: string, cv: UserData): Promise<boolean>
+  delete(id: string): Promise<boolean>
 }

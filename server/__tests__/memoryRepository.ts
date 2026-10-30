@@ -15,5 +15,13 @@ export function createMemoryRepository(initial: Record<string, UserData>): CvRep
       cvs.set(id, structuredClone(cv))
       return true
     },
+    async delete(id) {
+      return cvs.delete(id)
+    },
+    async create(id, cv) {
+      if (cvs.has(id)) return false
+      cvs.set(id, structuredClone(cv))
+      return true
+    },
   }
 }

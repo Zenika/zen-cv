@@ -38,6 +38,21 @@ export async function saveCv(id: string, cv: UserData) {
   })
 }
 
+export async function deleteCv(id: string) {
+  await request(cvUrl(id), { method: 'DELETE' })
+}
+
+export type ImportedCv = { id: string; warnings: string[] }
+
+export async function importCvPdf(file: Blob): Promise<ImportedCv> {
+  const response = await request('/api/cvs/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/pdf' },
+    body: file,
+  })
+  return response.json()
+}
+
 export async function getCvPdf(id: string) {
   return (await request(`${cvUrl(id)}/pdf`)).blob()
 }

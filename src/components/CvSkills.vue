@@ -1,13 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { UserData } from '../types'
 
-defineProps<{ cv: UserData }>()
+const props = defineProps<{ cv: UserData }>()
+
+const isEmpty = computed(
+  () =>
+    !props.cv.expertise.length &&
+    !props.cv.methodologies.length &&
+    !props.cv.trainer.length &&
+    !props.cv.certifications.length,
+)
 </script>
 
 <template>
-  <div class="skills">
+  <div v-if="!isEmpty" class="skills">
     <div class="skills__grid">
-      <section class="card">
+      <section v-if="cv.expertise.length" class="card">
         <h2 class="skills__title">Expertises</h2>
         <ul>
           <li v-for="skill in cv.expertise" :key="skill.name">
@@ -16,7 +25,7 @@ defineProps<{ cv: UserData }>()
         </ul>
       </section>
 
-      <section class="card">
+      <section v-if="cv.methodologies.length" class="card">
         <h2 class="skills__title">Méthodologies</h2>
         <ul>
           <li v-for="methodology in cv.methodologies" :key="methodology">
@@ -25,10 +34,19 @@ defineProps<{ cv: UserData }>()
         </ul>
       </section>
 
-      <section class="card">
+      <section v-if="cv.trainer.length" class="card">
         <h2 class="skills__title">Formateur</h2>
         <ul>
           <li v-for="training in cv.trainer" :key="training">{{ training }}</li>
+        </ul>
+      </section>
+
+      <section v-if="cv.certifications.length" class="card">
+        <h2 class="skills__title">Certifications</h2>
+        <ul>
+          <li v-for="certification in cv.certifications" :key="certification">
+            {{ certification }}
+          </li>
         </ul>
       </section>
     </div>

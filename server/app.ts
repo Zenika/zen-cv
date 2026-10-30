@@ -6,7 +6,8 @@ import { createPool, migrate } from './db/database.ts'
 import { createPostgresRepository } from './repository/postgresRepository.ts'
 import { createCvRoutes } from './routes/cvs.ts'
 import { createCvService, type CvService } from './services/cvService.ts'
-import { CvNotFoundError, PdfExportError } from './services/errors.ts'
+import { createPdfImporter } from './import/pdfImporter.ts'
+import { CvImportError, CvNotFoundError, PdfExportError } from './services/errors.ts'
 
 z.config(z.locales.fr())
 
@@ -18,6 +19,7 @@ export function createApp(service: CvService) {
     .onError((error, c) => {
       if (error instanceof HTTPException) return error.getResponse()
       if (error instanceof CvNotFoundError) return c.text(error.message, 404)
+      if (error instanceof CvImportError) return c.text(error.message, 422)
       if (error instanceof PdfExportError) return c.text(error.message, 500)
       console.error(error)
       return c.text('erreur interne du serveur.', 500)
@@ -33,7 +35,7 @@ type ServerOptions = {
 export function createServerApp({ databaseUrl, logoFile, baseUrl }: ServerOptions) {
   const pool = createPool(databaseUrl)
   const pdfRenderer = createPdfRenderer({ baseUrl, logoFile })
-  const service = createCvService(createPostgresRepository(pool), pdfRenderer)
+  const service = createCvService(createPostgresRepository(pool), pdfRenderer, createPdfImporter())
   return {
     app: createApp(service),
     migrate: () => migrate(pool),

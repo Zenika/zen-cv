@@ -33,6 +33,7 @@
       "BDD (Behavior Driven Development)"
     ],
     "trainer": ["Formateur NodeJS", "Formateur VueJS", "Formateur Javascript"],
+    "certifications": [],
     "experiences": [
       {
         "name": "Invivo Digital Factory",
@@ -463,6 +464,10 @@
       "Architecture hexagonale"
     ],
     "trainer": ["Formatrice Spring Boot", "Formatrice Kubernetes"],
+    "certifications": [
+      "AWS Certified Solutions Architect – Associate",
+      "Certified Kubernetes Application Developer"
+    ],
     "experiences": [
       {
         "name": "Banque Horizon",
