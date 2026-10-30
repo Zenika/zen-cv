@@ -142,6 +142,33 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
     expect((await repository.list()).map(({ id }) => id)).toEqual(['raphael-grand'])
   })
 
+  it('stores versions under their main CV and deletes them with it', async () => {
+    await seed(pool)
+    const repository = createPostgresRepository(pool)
+    const cv = (await repository.get('camille-martin'))!.cv
+    const source = { id: 'camille-martin', label: 'Banque' }
+    expect(await repository.create('camille-martin-v2', cv, undefined, source)).toBe('created')
+    expect(
+      await repository.create('camille-martin-v3', cv, undefined, { ...source, label: 'Autre' }),
+    ).toBe('created')
+    expect(await repository.get('camille-martin-v2')).toMatchObject({
+      sourceId: 'camille-martin',
+      label: 'Banque',
+      ownerEmail: null,
+    })
+    expect(await repository.setLabel('camille-martin-v3', 'Assurance')).toBe(true)
+    expect(await repository.setLabel('camille-martin', 'Principal')).toBe(false)
+    expect(await repository.versions('camille-martin')).toEqual([
+      { id: 'camille-martin-v2', label: 'Banque' },
+      { id: 'camille-martin-v3', label: 'Assurance' },
+    ])
+    expect(await repository.get('camille-martin')).toMatchObject({ sourceId: null, label: null })
+
+    await repository.delete('camille-martin')
+    expect(await repository.get('camille-martin-v2')).toBeUndefined()
+    expect((await repository.list()).map(({ id }) => id)).toEqual(['raphael-grand'])
+  })
+
   it('reads a CV stored before certifications existed', async () => {
     const { certifications: _certifications, ...legacy } = (await readSeed())['camille-martin']!
     await pool.query("insert into cvs (id, data) values ('ancien', $1)", [JSON.stringify(legacy)])

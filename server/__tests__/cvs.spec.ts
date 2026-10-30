@@ -235,6 +235,111 @@ describe('edit permissions', () => {
   })
 })
 
+describe('versions', () => {
+  const createVersion = (id: string, label: unknown) =>
+    app.request(`/api/cvs/${id}/versions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label }),
+    })
+  const rename = (id: string, label: unknown) =>
+    app.request(`/api/cvs/${id}/label`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label }),
+    })
+  const versions = async (id: string) => (await app.request(`/api/cvs/${id}/versions`)).json()
+
+  beforeEach(ownCamilleCv)
+
+  it('copies a CV under a label, as a version of the main CV', async () => {
+    const response = await createVersion('camille-martin', '  Mission Banque  ')
+    expect(response.status).toBe(201)
+    expect(await response.json()).toEqual({ id: 'camille-martin-v2' })
+    expect(await stored('camille-martin-v2')).toEqual(seedData['camille-martin'])
+    expect(await repository.get('camille-martin-v2')).toMatchObject({
+      sourceId: 'camille-martin',
+      label: 'Mission Banque',
+      ownerEmail: null,
+    })
+  })
+
+  it('copies a version with its changes, still attached to the main CV', async () => {
+    await createVersion('camille-martin', 'Banque')
+    await put('camille-martin-v2', { ...seedData['camille-martin']!, title: 'Architecte' })
+    expect(await (await createVersion('camille-martin-v2', 'Assurance')).json()).toEqual({
+      id: 'camille-martin-v3',
+    })
+    expect((await stored('camille-martin-v3'))!.title).toBe('Architecte')
+    const expected = [
+      { id: 'camille-martin', label: null },
+      { id: 'camille-martin-v2', label: 'Banque' },
+      { id: 'camille-martin-v3', label: 'Assurance' },
+    ]
+    expect(await versions('camille-martin')).toEqual(expected)
+    expect(await versions('camille-martin-v3')).toEqual(expected)
+  })
+
+  it('lists only main CVs on the home page', async () => {
+    await createVersion('camille-martin', 'Banque')
+    const summaries: { id: string }[] = await (await app.request('/api/cvs')).json()
+    expect(summaries.map(({ id }) => id)).toEqual(Object.keys(seedData))
+  })
+
+  it('gives versions the edit rights of the main CV', async () => {
+    await createVersion('camille-martin', 'Banque')
+    identity = async () => ({ email: 'jeanne.leroy@zenika.com', name: 'Jeanne Leroy' })
+    expect((await app.request('/api/cvs/camille-martin-v2')).headers.get('Allow')).toBe('GET')
+    expect((await createVersion('camille-martin-v2', 'Autre')).status).toBe(403)
+    expect((await rename('camille-martin-v2', 'Autre')).status).toBe(403)
+    expect(
+      (await put('camille-martin-v2', { ...seedData['camille-martin']!, title: 'X' })).status,
+    ).toBe(403)
+    relations['camille.martin@zenika.com'] = [{ value: 'jeanne.leroy@zenika.com', type: 'manager' }]
+    expect((await app.request('/api/cvs/camille-martin-v2')).headers.get('Allow')).toBe(
+      'GET, PUT, DELETE',
+    )
+  })
+
+  it('renames a version, never the main CV', async () => {
+    await createVersion('camille-martin', 'Banque')
+    expect((await rename('camille-martin-v2', 'Assurance')).status).toBe(204)
+    expect((await repository.get('camille-martin-v2'))!.label).toBe('Assurance')
+    const response = await rename('camille-martin', 'Principal')
+    expect(response.status).toBe(409)
+    expect(await response.text()).toBe('le CV principal n’a pas de label.')
+  })
+
+  it('requires a label', async () => {
+    for (const label of ['', '   ', 42, 'x'.repeat(101)])
+      expect((await createVersion('camille-martin', label)).status).toBe(400)
+    expect(await versions('camille-martin')).toEqual([{ id: 'camille-martin', label: null }])
+  })
+
+  it('deletes the versions with the main CV, and a version alone', async () => {
+    await createVersion('camille-martin', 'Banque')
+    await createVersion('camille-martin', 'Assurance')
+    await app.request('/api/cvs/camille-martin-v2', { method: 'DELETE' })
+    expect(await versions('camille-martin')).toEqual([
+      { id: 'camille-martin', label: null },
+      { id: 'camille-martin-v3', label: 'Assurance' },
+    ])
+    await app.request('/api/cvs/camille-martin', { method: 'DELETE' })
+    expect(await stored('camille-martin-v3')).toBeUndefined()
+  })
+
+  it('refuses to give a version its own owner', async () => {
+    await createVersion('camille-martin', 'Banque')
+    const response = await app.request('/api/cvs/camille-martin-v2/claim', { method: 'POST' })
+    expect(response.status).toBe(409)
+  })
+
+  it('answers 404 for an unknown CV', async () => {
+    expect((await createVersion('inconnu', 'Banque')).status).toBe(404)
+    expect((await app.request('/api/cvs/inconnu/versions')).status).toBe(404)
+  })
+})
+
 describe('POST /api/cvs/:id/claim', () => {
   const claim = (id: string) => app.request(`/api/cvs/${id}/claim`, { method: 'POST' })
 

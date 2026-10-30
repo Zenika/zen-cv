@@ -1,11 +1,17 @@
-import type { CurrentUser, CvSummary, UserData } from '../../shared/cv.ts'
+import type { CurrentUser, CvSummary, CvVersion, UserData } from '../../shared/cv.ts'
 import { isSameName } from '../../shared/names.ts'
 import type { PdfImporter } from '../import/pdfImporter.ts'
 import type { PdfRenderer } from '../pdf/pdfRenderer.ts'
-import type { CvRepository } from '../repository/cvRepository.ts'
+import type { CvRepository, VersionedCv } from '../repository/cvRepository.ts'
 import { missingValue, splitName } from '../import/parseCv.ts'
 import { canEdit, type RelationsOf } from '../auth/permissions.ts'
-import { CvConflictError, CvForbiddenError, CvNotFoundError, CvOwnerError } from './errors.ts'
+import {
+  CvConflictError,
+  CvForbiddenError,
+  CvNotFoundError,
+  CvOwnerError,
+  CvVersionError,
+} from './errors.ts'
 
 function slugify(parts: string[]) {
   return (
@@ -35,27 +41,55 @@ export function createCvService(
     return cv
   }
 
+  const sourceOf = async (stored: VersionedCv) =>
+    stored.sourceId ? await get(stored.sourceId) : stored
+
+  const editable = async (stored: VersionedCv, user: CurrentUser) =>
+    canEdit(user, (await sourceOf(stored)).ownerEmail, relationsOf)
+
   async function assertCanEdit(id: string, user: CurrentUser) {
-    if (!(await canEdit(user, (await get(id)).ownerEmail, relationsOf)))
-      throw new CvForbiddenError()
+    const stored = await get(id)
+    if (!(await editable(stored, user))) throw new CvForbiddenError()
+    return stored
   }
 
   return {
     async get(id: string, user: CurrentUser) {
-      const cv = await get(id)
-      return { ...cv, editable: await canEdit(user, cv.ownerEmail, relationsOf) }
+      const stored = await get(id)
+      return { ...stored, editable: await editable(stored, user) }
+    },
+
+    async versions(id: string): Promise<CvVersion[]> {
+      const sourceId = (await get(id)).sourceId ?? id
+      return [{ id: sourceId, label: null }, ...(await repository.versions(sourceId))]
+    },
+
+    async createVersion(id: string, label: string, user: CurrentUser) {
+      const { cv, sourceId } = await assertCanEdit(id, user)
+      const source = { id: sourceId ?? id, label }
+      for (let number = 2; ; number++) {
+        const versionId = `${source.id}-v${number}`
+        if ((await repository.create(versionId, cv, undefined, source)) === 'created')
+          return { id: versionId }
+      }
+    },
+
+    async rename(id: string, label: string, user: CurrentUser) {
+      const stored = await assertCanEdit(id, user)
+      if (!stored.sourceId || !(await repository.setLabel(id, label)))
+        throw new CvVersionError('le CV principal n’a pas de label.')
     },
 
     async list(): Promise<CvSummary[]> {
-      return (await repository.list()).map(
-        ({ id, cv: { firstname, name, title }, ownerEmail }) => ({
+      return (await repository.list())
+        .filter(({ sourceId }) => !sourceId)
+        .map(({ id, cv: { firstname, name, title }, ownerEmail }) => ({
           id,
           firstname,
           name,
           title,
           ownerEmail,
-        }),
-      )
+        }))
     },
 
     async replace(id: string, cv: UserData, version: number, user: CurrentUser) {
@@ -67,6 +101,8 @@ export function createCvService(
     },
 
     async claim(id: string, user: CurrentUser) {
+      if ((await get(id)).sourceId)
+        throw new CvOwnerError('une version a le propriétaire de son CV principal.')
       const result = await repository.setOwner(id, user.email.toLowerCase())
       if (result === 'not-found') throw new CvNotFoundError(id)
       if (result === 'already-owned')

@@ -1,4 +1,4 @@
-import type { CurrentUser, CvSummary, UserData } from '../types'
+import type { CurrentUser, CvSummary, CvVersion, UserData } from '../types'
 
 export class RequestError extends Error {
   status: number
@@ -61,6 +61,24 @@ export async function saveCv(id: string, cv: UserData, version: string) {
     body: JSON.stringify(cv),
   })
   return response.headers.get('ETag') ?? ''
+}
+
+export function getVersions(id: string) {
+  return requestJson<CvVersion[]>(`${cvUrl(id)}/versions`)
+}
+
+const jsonLabel = (method: string, label: string): RequestInit => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ label }),
+})
+
+export async function createVersion(id: string, label: string) {
+  return readJson<{ id: string }>(await request(`${cvUrl(id)}/versions`, jsonLabel('POST', label)))
+}
+
+export async function renameVersion(id: string, label: string) {
+  await request(`${cvUrl(id)}/label`, jsonLabel('PUT', label))
 }
 
 export async function claimCv(id: string) {

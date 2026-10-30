@@ -43,3 +43,10 @@ export class CvForbiddenError extends Error {
     this.name = 'CvForbiddenError'
   }
 }
+
+export class CvVersionError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CvVersionError'
+  }
+}

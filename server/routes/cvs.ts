@@ -7,6 +7,13 @@ import type { CvService } from '../services/cvService.ts'
 
 const etag = (version: number) => `"${version}"`
 
+const labelSchema = z.object({
+  label: z.string().trim().min(1, 'le label est obligatoire.').max(100),
+})
+const validLabel = zValidator('json', labelSchema, (result, c) => {
+  if (!result.success) return c.text(z.prettifyError(result.error), 400)
+})
+
 export function createCvRoutes(service: CvService) {
   return new Hono<{ Variables: { user: CurrentUser } }>()
     .get('/', async (c) => c.json(await service.list()))
@@ -48,6 +55,15 @@ export function createCvRoutes(service: CvService) {
         return c.body(null, 204, { ETag: etag(saved) })
       },
     )
+    .get('/:id/versions', async (c) => c.json(await service.versions(c.req.param('id'))))
+    .post('/:id/versions', validLabel, async (c) => {
+      const { label } = c.req.valid('json')
+      return c.json(await service.createVersion(c.req.param('id'), label, c.var.user), 201)
+    })
+    .put('/:id/label', validLabel, async (c) => {
+      await service.rename(c.req.param('id'), c.req.valid('json').label, c.var.user)
+      return c.body(null, 204)
+    })
     .post('/:id/claim', async (c) => {
       await service.claim(c.req.param('id'), c.var.user)
       return c.body(null, 204)

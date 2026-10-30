@@ -1,6 +1,14 @@
 import pg from 'pg'
 import { cvSchema } from '../../shared/cv.ts'
-import type { CvRepository } from './cvRepository.ts'
+import type { CvLink, CvRepository } from './cvRepository.ts'
+
+type LinkRow = { owner_email: string | null; source_id: string | null; label: string | null }
+
+const link = (row: LinkRow): CvLink => ({
+  ownerEmail: row.owner_email,
+  sourceId: row.source_id,
+  label: row.label,
+})
 
 const isOwnerTaken = (error: unknown) =>
   error instanceof pg.DatabaseError &&
@@ -10,27 +18,30 @@ const isOwnerTaken = (error: unknown) =>
 export function createPostgresRepository(pool: pg.Pool): CvRepository {
   return {
     async list() {
-      const { rows } = await pool.query<{ id: string; data: unknown; owner_email: string | null }>(
-        'select id, data, owner_email from cvs order by created_at, id',
+      const { rows } = await pool.query<LinkRow & { id: string; data: unknown }>(
+        'select id, data, owner_email, source_id, label from cvs order by created_at, id',
       )
-      return rows.map(({ id, data, owner_email }) => ({
-        id,
-        cv: cvSchema.parse(data),
-        ownerEmail: owner_email,
-      }))
+      return rows.map((row) => ({ id: row.id, cv: cvSchema.parse(row.data), ...link(row) }))
+    },
+
+    async versions(sourceId) {
+      const { rows } = await pool.query<{ id: string; label: string }>(
+        'select id, label from cvs where source_id = $1 order by created_at, id',
+        [sourceId],
+      )
+      return rows
     },
 
     async get(id) {
-      const { rows } = await pool.query<{
-        data: unknown
-        version: number
-        owner_email: string | null
-      }>('select data, version, owner_email from cvs where id = $1', [id])
+      const { rows } = await pool.query<LinkRow & { data: unknown; version: number }>(
+        'select data, version, owner_email, source_id, label from cvs where id = $1',
+        [id],
+      )
       return (
         rows[0] && {
           cv: cvSchema.parse(rows[0].data),
           version: rows[0].version,
-          ownerEmail: rows[0].owner_email,
+          ...link(rows[0]),
         }
       )
     },
@@ -47,11 +58,12 @@ export function createPostgresRepository(pool: pg.Pool): CvRepository {
       return rowCount ? 'conflict' : 'not-found'
     },
 
-    async create(id, cv, ownerEmail) {
+    async create(id, cv, ownerEmail, source) {
       try {
         const { rowCount } = await pool.query(
-          'insert into cvs (id, data, owner_email) values ($1, $2, $3) on conflict (id) do nothing',
-          [id, JSON.stringify(cv), ownerEmail ?? null],
+          `insert into cvs (id, data, owner_email, source_id, label) values ($1, $2, $3, $4, $5)
+           on conflict (id) do nothing`,
+          [id, JSON.stringify(cv), ownerEmail ?? null, source?.id ?? null, source?.label ?? null],
         )
         return rowCount === 1 ? 'created' : 'id-taken'
       } catch (error) {
@@ -73,6 +85,14 @@ export function createPostgresRepository(pool: pg.Pool): CvRepository {
       }
       const { rowCount } = await pool.query('select 1 from cvs where id = $1', [id])
       return rowCount ? 'already-owned' : 'not-found'
+    },
+
+    async setLabel(id, label) {
+      const { rowCount } = await pool.query(
+        'update cvs set label = $2 where id = $1 and source_id is not null',
+        [id, label],
+      )
+      return rowCount === 1
     },
 
     async delete(id) {

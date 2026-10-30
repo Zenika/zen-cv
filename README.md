@@ -169,12 +169,15 @@ All routes are under `/api`. Errors are returned as plain text in French. Every 
 | Method | Path | Response |
 | --- | --- | --- |
 | `GET` | `/api/me` | `200`: the signed-in user, `{ email, name, title?, relations }` (name, job title and relations from the Workspace directory) |
-| `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title, ownerEmail }` |
+| `GET` | `/api/cvs` | `200`: list of main CVs (no versions), `{ id, firstname, name, title, ownerEmail }` |
 | `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. With `?owner=me`, the CV is the signed-in user's: if the PDF's name doesn't match their account (accents, case and word order aside), the account's name is used instead. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
 | `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header and `Allow` telling whether I can edit it · `404` |
 | `PUT` | `/api/cvs/:id` | Replaces the whole CV. Needs `If-Match` with the version it replaces. `204` with the new version in `ETag` · `400` if the body is invalid · `404` · `403` if I can't edit it · `412` if someone saved the CV in the meantime · `428` without `If-Match` |
-| `POST` | `/api/cvs/:id/claim` | Makes the signed-in user the owner of a CV nobody owns. `204` · `404` · `409` if the CV has an owner or the user already owns one |
-| `DELETE` | `/api/cvs/:id` | `204` · `403` if I can't edit it · `404` |
+| `GET` | `/api/cvs/:id/versions` | `200`: the main CV then its versions, `[{ id, label }]` (`label` is `null` for the main CV), from the main CV or any of its versions · `404` |
+| `POST` | `/api/cvs/:id/versions` | Body `{ label }` (1 to 100 characters). Copies the CV (main or version) into a new version of the main CV. `201`: `{ id }` · `400` · `403` if I can't edit it · `404` |
+| `PUT` | `/api/cvs/:id/label` | Body `{ label }`. Renames a version. `204` · `400` · `403` · `404` · `409` for a main CV |
+| `POST` | `/api/cvs/:id/claim` | Makes the signed-in user the owner of a CV nobody owns. `204` · `404` · `409` if the CV has an owner, is a version, or the user already owns one |
+| `DELETE` | `/api/cvs/:id` | Deleting a main CV deletes its versions too. `204` · `403` if I can't edit it · `404` |
 | `GET` | `/api/cvs/:id/pdf` | `200`: `application/pdf` · `404` · `500` if the export fails |
 
 ### CV owners
@@ -183,6 +186,15 @@ Each CV can have an owner, `owner_email` in the `cvs` table. It's kept outside t
 
 - imported with "Importer mon CV" (`POST /api/cvs/import?owner=me`): if the PDF's name doesn't match the account (`shared/names.ts`: accents, case and word order are ignored), the account's name is used instead; a second import of one's own CV answers `409`;
 - claimed from the home page (`POST /api/cvs/:id/claim`), for CVs created before owners existed or imported for someone else.
+
+### CV versions
+
+Whoever can edit a CV can make versions of it, e.g. one per client: "Nouvelle version" on the CV page copies the CV being viewed under a label. A version is a row of `cvs` with `source_id` pointing to the main CV (always the main one, even when copying a version) and a `label`; its id is `<main id>-v2`, `-v3`… so the label never shows in a URL or a PDF file name. Versions:
+
+- are edited like any CV, independently of the main CV and of each other;
+- have no owner of their own: edit rights and ownership come from the main CV;
+- aren't listed on the home page; the CV page shows the main CV and its versions in a bar, hidden when printing, so the label never appears on the PDF;
+- are deleted with their main CV (`on delete cascade`).
 
 ### Who can edit a CV
 
