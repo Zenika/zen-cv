@@ -15,9 +15,9 @@ const experience = (name: string): Experience => ({
 
 const experiences = [experience('Alpha'), experience('Beta'), experience('Gamma')]
 
-function mountList(save: SaveCv = vi.fn<SaveCv>().mockResolvedValue(true)) {
+function mountList(save: SaveCv = vi.fn<SaveCv>().mockResolvedValue(true), editable = true) {
   return mount(CvExperiences, {
-    props: { experiences, save, saveError: null },
+    props: { experiences, editable, save, saveError: null },
     attachTo: document.body,
   })
 }
@@ -29,6 +29,16 @@ describe('CvExperiences', () => {
   it('lists the experiences in order', () => {
     const wrapper = mountList()
     expect(names(wrapper)).toEqual(['Alpha', 'Beta', 'Gamma'])
+    wrapper.unmount()
+  })
+
+  it('shows the experiences without any way to change them when the CV is read-only', async () => {
+    const save = vi.fn<SaveCv>()
+    const wrapper = mountList(save, false)
+    expect(names(wrapper)).toEqual(['Alpha', 'Beta', 'Gamma'])
+    expect(wrapper.findAll('.experience-card button, .experience-list__add')).toEqual([])
+    await wrapper.findAll('.experience-card')[1]!.trigger('keydown', { key: 'ArrowUp' })
+    expect(save).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 

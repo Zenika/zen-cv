@@ -11,8 +11,18 @@ import { deleteCv, errorMessage } from '../service/cvApi'
 
 const props = defineProps<{ id: string }>()
 
-const { cv, loadError, load, saveError, conflict, save, exportError, isExporting, exportPdf } =
-  useCv(props.id)
+const {
+  cv,
+  editable,
+  loadError,
+  load,
+  saveError,
+  conflict,
+  save,
+  exportError,
+  isExporting,
+  exportPdf,
+} = useCv(props.id)
 
 const reload = () => location.reload()
 
@@ -43,7 +53,7 @@ onMounted(load)
 <template>
   <div class="cv cv-page" v-if="cv">
     <div class="cv-page__actions">
-      <button type="button" class="button" @click="deleteDialog?.showModal()">
+      <button v-if="editable" type="button" class="button" @click="deleteDialog?.showModal()">
         Supprimer le CV
       </button>
       <button
@@ -74,7 +84,7 @@ onMounted(load)
       </form>
     </dialog>
 
-    <CvHeader :cv="cv" :save="save" />
+    <CvHeader :cv="cv" :editable="editable" :save="save" />
 
     <div class="cv-page__intro">
       <div class="card cv-page__bio">
@@ -86,6 +96,7 @@ onMounted(load)
           v-slot="{ edit }"
         >
           <button
+            v-if="editable"
             type="button"
             class="icon-button icon-button--small cv-page__bio-edit"
             aria-label="Modifier la bio"
@@ -103,6 +114,7 @@ onMounted(load)
     <main class="cv-page__body">
       <CvExperiences
         :experiences="cv.experiences"
+        :editable="editable"
         :save="save"
         :save-error="saveError"
         @clear-save-error="saveError = null"

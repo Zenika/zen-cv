@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  cacheProfiles,
   createDirectoryLookup,
   withDirectoryProfiles,
   type DirectoryLookup,
@@ -87,9 +88,11 @@ describe('withDirectoryProfiles', () => {
 
   it('adds the directory profile and caches it', async () => {
     const lookup = vi.fn<DirectoryLookup>().mockResolvedValue(profile)
-    const named = withDirectoryProfiles(identity, lookup)
+    const profiles = cacheProfiles(lookup)
+    const named = withDirectoryProfiles(identity, profiles)
     await Promise.all([named(signedIn), named(signedIn)])
     expect(await named(signedIn)).toEqual({ email: 'raphael.grand@zenika.com', ...profile })
+    expect(await profiles('Raphael.Grand@zenika.com')).toEqual(profile)
     expect(lookup).toHaveBeenCalledOnce()
     expect(await named(new Headers())).toBeNull()
   })
@@ -98,7 +101,7 @@ describe('withDirectoryProfiles', () => {
     const lookup = vi
       .fn<DirectoryLookup>()
       .mockResolvedValue({ title: 'Consultant', relations: [] })
-    expect(await withDirectoryProfiles(identity, lookup)(signedIn)).toEqual({
+    expect(await withDirectoryProfiles(identity, cacheProfiles(lookup))(signedIn)).toEqual({
       email: 'raphael.grand@zenika.com',
       name: 'Raphael Grand',
       relations: [],
@@ -112,7 +115,10 @@ describe('withDirectoryProfiles', () => {
       .fn<DirectoryLookup>()
       .mockRejectedValueOnce(new Error('annuaire Google Workspace : 403'))
       .mockResolvedValue(profile)
-    const named = withDirectoryProfiles(identity, lookup, () => time)
+    const named = withDirectoryProfiles(
+      identity,
+      cacheProfiles(lookup, () => time),
+    )
 
     expect((await named(signedIn))!.name).toBe('Raphael Grand')
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('annuaire Google Workspace : 403'))

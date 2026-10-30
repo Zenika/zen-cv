@@ -13,6 +13,7 @@ const { app, migrate, close } = createServerApp({
   baseUrl: () => `http://localhost:${port}/`,
   iapAudience: process.env.IAP_AUDIENCE,
   devUserEmail: process.env.DEV_USER_EMAIL,
+  devUserTitle: process.env.DEV_USER_TITLE,
   production: process.env.NODE_ENV === 'production',
 })
 

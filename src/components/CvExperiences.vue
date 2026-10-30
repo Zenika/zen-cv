@@ -8,6 +8,7 @@ import type { Experience } from '../types'
 
 const props = defineProps<{
   experiences: Experience[]
+  editable: boolean
   save: SaveCv
   saveError: string | null
 }>()
@@ -71,13 +72,18 @@ async function remove() {
     </div>
 
     <ExperienceForm v-if="isAdding" @save="add" @cancel="isAdding = false" />
-    <button v-else type="button" class="button experience-list__add" @click="isAdding = true">
+    <button
+      v-else-if="editable"
+      type="button"
+      class="button experience-list__add"
+      @click="isAdding = true"
+    >
       Ajouter une expérience
     </button>
 
     <VueDraggable
       :model-value="experiences"
-      :disabled="edited !== null"
+      :disabled="!editable || edited !== null"
       :animation="200"
       :scroll-sensitivity="120"
       :scroll-speed="25"
@@ -96,8 +102,9 @@ async function remove() {
           @cancel="edited = null"
         />
         <ExperienceCard
-          v-else
+          v-else-if="editable"
           :experience="experience"
+          editable
           class="experience-list__item"
           tabindex="0"
           :aria-label="`${experience.name}, flèches haut et bas pour déplacer`"
@@ -106,6 +113,7 @@ async function remove() {
           @edit="edited = experience"
           @delete="askDelete(experience)"
         />
+        <ExperienceCard v-else :experience="experience" />
       </template>
     </VueDraggable>
 

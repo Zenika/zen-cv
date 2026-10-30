@@ -1,4 +1,4 @@
-import type { CurrentUser, Relation } from '../../shared/cv.ts'
+import type { Relation } from '../../shared/cv.ts'
 import type { Identity } from './identity.ts'
 
 export type DirectoryProfile = { name?: string; title?: string; relations: Relation[] }
@@ -54,34 +54,40 @@ export function createDirectoryLookup(fetcher: typeof fetch = fetch): DirectoryL
 const foundTtl = 12 * 60 * 60 * 1000
 const missingTtl = 5 * 60 * 1000
 
-export function withDirectoryProfiles(
-  identity: Identity,
-  lookup: DirectoryLookup,
-  now: () => number = Date.now,
-): Identity {
-  const cache = new Map<string, { user: Promise<CurrentUser>; expires: number }>()
+export type Profiles = (email: string) => Promise<DirectoryProfile | null>
 
-  async function resolve(fallback: CurrentUser) {
+export function cacheProfiles(lookup: DirectoryLookup, now: () => number = Date.now): Profiles {
+  const cache = new Map<string, { profile: Promise<DirectoryProfile | null>; expires: number }>()
+
+  async function resolve(email: string) {
     try {
-      const profile = await lookup(fallback.email)
-      if (profile.name) return { ...fallback, ...profile, name: profile.name }
+      const profile = await lookup(email)
+      if (profile.name) return profile
     } catch (error) {
       console.warn(
-        `profil de ${fallback.email} introuvable dans l’annuaire : ${error instanceof Error ? error.message : error}`,
+        `profil de ${email} introuvable dans l’annuaire : ${error instanceof Error ? error.message : error}`,
       )
     }
-    cache.set(fallback.email, { user: Promise.resolve(fallback), expires: now() + missingTtl })
-    return fallback
+    cache.set(email, { profile: Promise.resolve(null), expires: now() + missingTtl })
+    return null
   }
 
+  return (email) => {
+    const key = email.toLowerCase()
+    let cached = cache.get(key)
+    if (!cached || cached.expires <= now()) {
+      cached = { profile: resolve(key), expires: now() + foundTtl }
+      cache.set(key, cached)
+    }
+    return cached.profile
+  }
+}
+
+export function withDirectoryProfiles(identity: Identity, profiles: Profiles): Identity {
   return async (headers) => {
     const user = await identity(headers)
     if (!user) return null
-    let cached = cache.get(user.email)
-    if (!cached || cached.expires <= now()) {
-      cached = { user: resolve(user), expires: now() + foundTtl }
-      cache.set(user.email, cached)
-    }
-    return cached.user
+    const profile = await profiles(user.email)
+    return profile ? { ...user, ...profile, name: profile.name ?? user.name } : user
   }
 }

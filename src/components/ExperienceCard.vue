@@ -2,14 +2,14 @@
 import { PencilIcon, Trash2Icon } from '@lucide/vue'
 import type { Experience } from '../types'
 
-defineProps<{ experience: Experience }>()
+defineProps<{ experience: Experience; editable?: boolean }>()
 
 const emit = defineEmits<{ edit: []; delete: [] }>()
 </script>
 
 <template>
   <article class="row card card--row experience-card">
-    <div class="experience-card__actions">
+    <div v-if="editable" class="experience-card__actions">
       <button
         type="button"
         class="icon-button experience-card__edit"

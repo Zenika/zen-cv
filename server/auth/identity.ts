@@ -52,8 +52,8 @@ export function createIapIdentity(audience: string, keys: JWTVerifyGetKey = iapK
   }
 }
 
-export function createFixedIdentity(email: string): Identity {
-  return async () => userFromEmail(email)
+export function createFixedIdentity(email: string, title?: string): Identity {
+  return async () => ({ ...userFromEmail(email), ...(title && { title }) })
 }
 
 export function withInternalToken(identity: Identity, token: string): Identity {
