@@ -6,7 +6,8 @@ const directoryScope = 'https://www.googleapis.com/auth/admin.directory.user.rea
 const metadataTokenUrl = `http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token?scopes=${encodeURIComponent(directoryScope)}`
 
 async function readJson<T>(response: Response, step: string): Promise<T> {
-  if (!response.ok) throw new Error(`${step} : ${response.status} ${await response.text()}`)
+  if (!response.ok)
+    throw new Error(`${step} : ${response.status} ${(await response.text()).replace(/\s+/g, ' ')}`)
   return response.json() as Promise<T>
 }
 

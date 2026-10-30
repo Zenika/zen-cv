@@ -30,10 +30,15 @@ describe('createDirectoryLookup', () => {
 
   it('reports the failing step', async () => {
     const fetcher = fakeGoogle(
-      new Response('Not Authorized to access this resource', { status: 403 }),
+      new Response(
+        '{\n  "error": {\n    "message": "Not Authorized to access this resource"\n  }\n}',
+        {
+          status: 403,
+        },
+      ),
     )
     await expect(createDirectoryLookup(fetcher)('a@zenika.com')).rejects.toThrow(
-      'annuaire Google Workspace : 403 Not Authorized to access this resource',
+      'annuaire Google Workspace : 403 { "error": { "message": "Not Authorized to access this resource" } }',
     )
   })
 })
