@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  claimCv,
   deleteCv,
   errorMessage,
   getCv,
@@ -68,6 +69,12 @@ describe('cvApi', () => {
       headers: { 'Content-Type': 'application/pdf' },
       body: file,
     })
+  })
+
+  it('claims the CV for the signed-in user', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+    await claimCv('a/b')
+    expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a%2Fb/claim', { method: 'POST' })
   })
 
   it('deletes the CV', async () => {

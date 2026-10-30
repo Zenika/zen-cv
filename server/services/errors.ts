@@ -14,6 +14,13 @@ export class CvConflictError extends Error {
   }
 }
 
+export class CvOwnerError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CvOwnerError'
+  }
+}
+
 export class PdfExportError extends Error {
   constructor(message: string) {
     super(message)

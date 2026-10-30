@@ -59,6 +59,10 @@ export async function saveCv(id: string, cv: UserData, version: string) {
   return response.headers.get('ETag') ?? ''
 }
 
+export async function claimCv(id: string) {
+  await request(`${cvUrl(id)}/claim`, { method: 'POST' })
+}
+
 export async function deleteCv(id: string) {
   await request(cvUrl(id), { method: 'DELETE' })
 }

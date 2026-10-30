@@ -20,6 +20,7 @@ import { createPdfImporter } from './import/pdfImporter.ts'
 import {
   CvConflictError,
   CvImportError,
+  CvOwnerError,
   CvNotFoundError,
   PdfExportError,
 } from './services/errors.ts'
@@ -43,6 +44,7 @@ export function createApp(service: CvService, identity: Identity) {
       if (error instanceof HTTPException) return error.getResponse()
       if (error instanceof CvNotFoundError) return c.text(error.message, 404)
       if (error instanceof CvConflictError) return c.text(error.message, 412)
+      if (error instanceof CvOwnerError) return c.text(error.message, 409)
       if (error instanceof CvImportError) return c.text(error.message, 422)
       if (error instanceof PdfExportError) return c.text(error.message, 500)
       console.error(error)

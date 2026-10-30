@@ -19,4 +19,8 @@ export async function migrate(pool: pg.Pool) {
     )
   `)
   await pool.query('alter table cvs add column if not exists version integer not null default 1')
+  await pool.query('alter table cvs add column if not exists owner_email text')
+  await pool.query(
+    'create unique index if not exists cvs_owner_email on cvs (owner_email) where owner_email is not null',
+  )
 }

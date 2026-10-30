@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { isSameName } from '../../shared/names.ts'
 import { useCurrentUser } from '../composables/useCurrentUser'
-import { errorMessage, getCvs, importCvPdf } from '../service/cvApi'
+import { claimCv, errorMessage, getCvs, importCvPdf } from '../service/cvApi'
 import type { CvSummary } from '../types'
 
 const cvs = ref<CvSummary[] | null>(null)
@@ -19,16 +19,32 @@ async function loadCvs() {
 }
 
 const user = useCurrentUser()
-const skipKey = computed(() => `zen-cv:passer-import:${user.value?.email}`)
+const skipKey = computed(() => `zen-cv:passer-accueil:${user.value?.email}`)
 const skipped = ref(false)
+const isMine = (cv: CvSummary) => cv.ownerEmail === user.value?.email.toLowerCase()
+const candidates = computed(() => {
+  const name = user.value?.name
+  return name ? (cvs.value ?? []).filter((cv) => !cv.ownerEmail && isSameName(name, cv)) : []
+})
 const showWelcome = computed(
   () =>
     user.value !== null &&
     cvs.value !== null &&
     !skipped.value &&
     localStorage.getItem(skipKey.value) === null &&
-    !cvs.value.some((cv) => isSameName(user.value!.name, cv)),
+    !cvs.value.some(isMine),
 )
+const claimError = ref<string | null>(null)
+
+async function claim(cv: CvSummary) {
+  claimError.value = null
+  try {
+    await claimCv(cv.id)
+    await loadCvs()
+  } catch (error) {
+    claimError.value = errorMessage(error)
+  }
+}
 
 function skipWelcome() {
   localStorage.setItem(skipKey.value, new Date().toISOString())
@@ -81,7 +97,24 @@ onMounted(loadCvs)
 
       <section v-if="showWelcome" class="card home__welcome" aria-labelledby="welcome-title">
         <h2 id="welcome-title" class="home__welcome-title">Bienvenue {{ user!.name }} !</h2>
-        <p>
+        <template v-if="candidates.length">
+          <p>Nous avons trouvé un CV à votre nom. Est-ce le vôtre ?</p>
+          <ul class="home__candidates">
+            <li v-for="cv in candidates" :key="cv.id" class="home__candidate">
+              <RouterLink :to="`/cv/${encodeURIComponent(cv.id)}`" class="home__candidate-link">
+                {{ cv.firstname }} {{ cv.name }}</RouterLink
+              ><template v-if="cv.title"> · {{ cv.title }}</template>
+              <button type="button" class="button button--primary" @click="claim(cv)">
+                C'est mon CV
+              </button>
+            </li>
+          </ul>
+          <p v-if="claimError" class="home__claim-error" role="alert">
+            <strong>Le CV n'a pas pu vous être attribué :</strong> {{ claimError }}
+          </p>
+          <p>Sinon, importez votre CV Zenika au format PDF.</p>
+        </template>
+        <p v-else>
           Aucun CV à votre nom pour l'instant. Importez votre CV Zenika au format PDF : il sera
           repris ici, prêt à être relu et complété.
         </p>
@@ -120,6 +153,7 @@ onMounted(loadCvs)
               {{ cv.firstname }} <span class="home__lastname">{{ cv.name }}</span>
             </span>
             <span class="home__job">{{ cv.title }}</span>
+            <span v-if="isMine(cv)" class="home__mine">Mon CV</span>
           </RouterLink>
         </li>
       </ul>
@@ -232,6 +266,37 @@ onMounted(loadCvs)
 
   &__job {
     color: #555;
+  }
+
+  &__mine {
+    justify-self: start;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background: $red;
+    border-radius: 4px;
+  }
+
+  &__candidates {
+    display: grid;
+    gap: 8px;
+  }
+
+  &__candidate {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: center;
+  }
+
+  &__candidate-link {
+    font-weight: 600;
+    color: inherit;
+  }
+
+  &__claim-error {
+    color: $red;
   }
 }
 </style>

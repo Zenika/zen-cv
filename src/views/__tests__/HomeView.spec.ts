@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { getCvs, importCvPdf } from '../../service/cvApi'
+import { claimCv, getCvs, importCvPdf } from '../../service/cvApi'
 import type { CurrentUser, CvSummary } from '../../types'
 import HomeView from '../HomeView.vue'
 
@@ -15,10 +15,24 @@ vi.mock('../../service/cvApi', async (importOriginal) => {
     ...original,
     getCvs: vi.fn<typeof original.getCvs>(),
     importCvPdf: vi.fn<typeof original.importCvPdf>(),
+    claimCv: vi.fn<typeof original.claimCv>(),
   }
 })
 
-const camille: CvSummary = { id: 'camille-martin', firstname: 'Camille', name: 'Martin', title: '' }
+const camille: CvSummary = {
+  id: 'camille-martin',
+  firstname: 'Camille',
+  name: 'Martin',
+  title: '',
+  ownerEmail: null,
+}
+const raphael: CvSummary = {
+  id: 'raphael-grand',
+  firstname: 'Raphaël',
+  name: 'Grand',
+  title: 'Développeur',
+  ownerEmail: null,
+}
 
 async function mountHome(cvs: CvSummary[] = [camille]) {
   vi.mocked(getCvs).mockResolvedValue(cvs)
@@ -51,14 +65,54 @@ describe('HomeView welcome', () => {
   it('offers to import their CV to a user who has none', async () => {
     const { wrapper } = await mountHome()
     expect(welcome(wrapper).text()).toContain('Bienvenue Raphael GRAND !')
+    expect(welcome(wrapper).text()).toContain('Aucun CV à votre nom')
   })
 
-  it('stays hidden when a CV already bears the user name', async () => {
+  it('stays hidden when the user owns a CV, and marks it', async () => {
     const { wrapper } = await mountHome([
       camille,
-      { id: 'raphael-grand', firstname: 'Raphaël', name: 'Grand', title: '' },
+      { ...raphael, name: 'Autre nom', ownerEmail: 'raphael.grand@zenika.com' },
     ])
     expect(welcome(wrapper).exists()).toBe(false)
+    expect(wrapper.findAll('.home__card').map((card) => card.find('.home__mine').exists())).toEqual(
+      [false, true],
+    )
+  })
+
+  it('asks whether an unowned CV bearing the user name is theirs', async () => {
+    vi.mocked(claimCv).mockResolvedValue()
+    const { wrapper } = await mountHome([camille, raphael])
+    expect(welcome(wrapper).text()).toContain('Est-ce le vôtre ?')
+    expect(
+      welcome(wrapper)
+        .findAll('.home__candidate')
+        .map((item) => item.text()),
+    ).toEqual(["Raphaël Grand · Développeur C'est mon CV"])
+
+    vi.mocked(getCvs).mockResolvedValue([
+      camille,
+      { ...raphael, ownerEmail: 'raphael.grand@zenika.com' },
+    ])
+    await welcome(wrapper).find('.home__candidate button').trigger('click')
+    await flushPromises()
+    expect(claimCv).toHaveBeenCalledWith('raphael-grand')
+    expect(welcome(wrapper).exists()).toBe(false)
+    expect(wrapper.find('.home__mine').exists()).toBe(true)
+  })
+
+  it('explains why the CV could not be claimed', async () => {
+    vi.mocked(claimCv).mockRejectedValue(new Error('ce CV appartient déjà à quelqu’un d’autre.'))
+    const { wrapper } = await mountHome([camille, raphael])
+    await welcome(wrapper).find('.home__candidate button').trigger('click')
+    await flushPromises()
+    expect(welcome(wrapper).find('[role="alert"]').text()).toContain(
+      'ce CV appartient déjà à quelqu’un d’autre.',
+    )
+  })
+
+  it('does not offer a CV someone else owns', async () => {
+    const { wrapper } = await mountHome([{ ...raphael, ownerEmail: 'raphael.grand@autre.example' }])
+    expect(welcome(wrapper).text()).toContain('Aucun CV à votre nom')
   })
 
   it('stays hidden until the user is known', async () => {
@@ -69,7 +123,7 @@ describe('HomeView welcome', () => {
 
   it('remembers "Plus tard" for this user only', async () => {
     const { wrapper } = await mountHome()
-    await welcome(wrapper).find('button').trigger('click')
+    await welcome(wrapper).find('button:not(.button--primary)').trigger('click')
     expect(welcome(wrapper).exists()).toBe(false)
     expect((await mountHome()).wrapper.find('.home__welcome').exists()).toBe(false)
 

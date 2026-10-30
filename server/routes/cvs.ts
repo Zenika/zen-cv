@@ -42,6 +42,10 @@ export function createCvRoutes(service: CvService) {
         return c.body(null, 204, { ETag: etag(saved) })
       },
     )
+    .post('/:id/claim', async (c) => {
+      await service.claim(c.req.param('id'), c.var.user)
+      return c.body(null, 204)
+    })
     .delete('/:id', async (c) => {
       await service.delete(c.req.param('id'))
       return c.body(null, 204)
