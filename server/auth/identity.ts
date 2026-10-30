@@ -22,7 +22,7 @@ export function nameFromEmail(email: string) {
   return name || email
 }
 
-const userFromEmail = (email: string) => ({ email, name: nameFromEmail(email) })
+const userFromEmail = (email: string) => ({ email, name: nameFromEmail(email), relations: [] })
 
 function receivedAudience(assertion: string) {
   try {

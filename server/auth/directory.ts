@@ -1,9 +1,17 @@
+import type { CurrentUser, Relation } from '../../shared/cv.ts'
 import type { Identity } from './identity.ts'
 
-export type NameLookup = (email: string) => Promise<string | undefined>
+export type DirectoryProfile = { name?: string; title?: string; relations: Relation[] }
+export type DirectoryLookup = (email: string) => Promise<DirectoryProfile>
 
 const directoryScope = 'https://www.googleapis.com/auth/admin.directory.user.readonly'
 const metadataTokenUrl = `http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token?scopes=${encodeURIComponent(directoryScope)}`
+
+type DirectoryUser = {
+  name?: { fullName?: string }
+  organizations?: { title?: string; primary?: boolean }[]
+  relations?: { value?: string; type?: string }[]
+}
 
 async function readJson<T>(response: Response, step: string): Promise<T> {
   if (!response.ok)
@@ -11,92 +19,58 @@ async function readJson<T>(response: Response, step: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function createDirectoryLookup(fetcher: typeof fetch = fetch): NameLookup {
+function primaryTitle(organizations: DirectoryUser['organizations'] = []) {
+  const withTitle = organizations.filter((organization) => organization.title)
+  return (withTitle.find((organization) => organization.primary) ?? withTitle[0])?.title
+}
+
+function relations(user: DirectoryUser): Relation[] {
+  return (user.relations ?? []).flatMap(({ value, type }) =>
+    value ? [{ value, type: type ?? '' }] : [],
+  )
+}
+
+export function createDirectoryLookup(fetcher: typeof fetch = fetch): DirectoryLookup {
   return async (email) => {
     const { access_token } = await readJson<{ access_token: string }>(
       await fetcher(metadataTokenUrl, { headers: { 'Metadata-Flavor': 'Google' } }),
       'jeton du compte de service',
     )
-    const user = await readJson<{ name?: { fullName?: string } }>(
+    const user = await readJson<DirectoryUser>(
       await fetcher(
-        `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}?fields=name`,
+        `https://admin.googleapis.com/admin/directory/v1/users/${encodeURIComponent(email)}?fields=name,organizations,relations`,
         { headers: { Authorization: `Bearer ${access_token}` } },
       ),
       'annuaire Google Workspace',
     )
-    return user.name?.fullName || undefined
-  }
-}
-
-const groupScope = 'https://www.googleapis.com/auth/admin.directory.group.readonly'
-
-export type UserDetails = (email: string) => Promise<Record<string, unknown>>
-
-export function createUserDetails(fetcher: typeof fetch = fetch): UserDetails {
-  async function attempt(run: () => Promise<unknown>) {
-    try {
-      return await run()
-    } catch (error) {
-      return { erreur: error instanceof Error ? error.message : String(error) }
+    return {
+      name: user.name?.fullName || undefined,
+      title: primaryTitle(user.organizations),
+      relations: relations(user),
     }
   }
-
-  async function token(scopes: string[]) {
-    const url = `http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token?scopes=${encodeURIComponent(scopes.join(','))}`
-    const { access_token } = await readJson<{ access_token: string }>(
-      await fetcher(url, { headers: { 'Metadata-Flavor': 'Google' } }),
-      'jeton du compte de service',
-    )
-    return access_token
-  }
-
-  async function get(url: string, scopes: string[], step: string) {
-    const response = await fetcher(url, {
-      headers: { Authorization: `Bearer ${await token(scopes)}` },
-    })
-    return readJson<unknown>(response, step)
-  }
-
-  const api = 'https://admin.googleapis.com/admin/directory/v1'
-
-  return async (email) => ({
-    annuaire: await attempt(() =>
-      get(
-        `${api}/users/${encodeURIComponent(email)}?projection=full`,
-        [directoryScope],
-        'annuaire Google Workspace',
-      ),
-    ),
-    groupes: await attempt(() =>
-      get(
-        `${api}/groups?userKey=${encodeURIComponent(email)}`,
-        [groupScope],
-        'groupes Google Workspace',
-      ),
-    ),
-  })
 }
 
 const foundTtl = 12 * 60 * 60 * 1000
 const missingTtl = 5 * 60 * 1000
 
-export function withDirectoryNames(
+export function withDirectoryProfiles(
   identity: Identity,
-  lookup: NameLookup,
+  lookup: DirectoryLookup,
   now: () => number = Date.now,
 ): Identity {
-  const cache = new Map<string, { name: Promise<string>; expires: number }>()
+  const cache = new Map<string, { user: Promise<CurrentUser>; expires: number }>()
 
-  async function resolve(email: string, fallback: string) {
+  async function resolve(fallback: CurrentUser) {
     try {
-      const name = await lookup(email)
-      if (name) return name
+      const profile = await lookup(fallback.email)
+      if (profile.name) return { ...fallback, ...profile, name: profile.name }
     } catch (error) {
       console.warn(
-        `nom de ${email} introuvable dans l’annuaire : ${error instanceof Error ? error.message : error}`,
+        `profil de ${fallback.email} introuvable dans l’annuaire : ${error instanceof Error ? error.message : error}`,
       )
     }
-    cache.set(email, { name: Promise.resolve(fallback), expires: now() + missingTtl })
+    cache.set(fallback.email, { user: Promise.resolve(fallback), expires: now() + missingTtl })
     return fallback
   }
 
@@ -105,9 +79,9 @@ export function withDirectoryNames(
     if (!user) return null
     let cached = cache.get(user.email)
     if (!cached || cached.expires <= now()) {
-      cached = { name: resolve(user.email, user.name), expires: now() + foundTtl }
+      cached = { user: resolve(user), expires: now() + foundTtl }
       cache.set(user.email, cached)
     }
-    return { ...user, name: await cached.name }
+    return cached.user
   }
 }

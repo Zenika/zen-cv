@@ -167,7 +167,7 @@ All routes are under `/api`. Errors are returned as plain text in French. Every 
 
 | Method | Path | Response |
 | --- | --- | --- |
-| `GET` | `/api/me` | `200`: the signed-in user, `{ email, name }` (name from the Workspace directory) |
+| `GET` | `/api/me` | `200`: the signed-in user, `{ email, name, title?, relations }` (name, job title and relations from the Workspace directory) |
 | `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title, ownerEmail }` |
 | `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. With `?owner=me`, the CV is the signed-in user's: if the PDF's name doesn't match their account (accents, case and word order aside), the account's name is used instead. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
 | `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header · `404` |
@@ -195,7 +195,7 @@ Each CV has a `version`, increased by every save. The page keeps the version it 
 
 In production, IAP signs in the user before any request reaches the app, and adds a signed token, `x-goog-iap-jwt-assertion`. `server/auth/identity.ts` checks its signature (Google's public keys), issuer and audience (`IAP_AUDIENCE`), then reads the email. The plain `x-goog-authenticated-user-email` header is never trusted.
 
-- The full name comes from the Google Workspace directory (`server/auth/directory.ts`). The runtime service account has a read-only Workspace admin role (Users > Read): the app asks Cloud Run's metadata server for a token with the `admin.directory.user.readonly` scope and reads the user's name. Names are cached for 12 hours. If the directory can't be reached, the name is built from the address (`prenom.nom@…` → "Prenom Nom", without accents), the reason is logged (`nom de … introuvable dans l’annuaire`) and the directory is asked again 5 minutes later.
+- The full name comes from the Google Workspace directory (`server/auth/directory.ts`). The runtime service account has a read-only Workspace admin role (Users > Read): the app asks Cloud Run's metadata server for a token with the `admin.directory.user.readonly` scope and reads the user's name, job title (`organizations[].title`, the primary organization first) and relations (`relations[]`, `{ value, type }`, e.g. their manager). Profiles are cached for 12 hours. If the directory can't be reached, the name is built from the address (`prenom.nom@…` → "Prenom Nom", without accents) with no title and no relations, the reason is logged (`profil de … introuvable dans l’annuaire`) and the directory is asked again 5 minutes later.
 - Locally and in the e2e tests there is no IAP: the user is `DEV_USER_EMAIL` (default `dev@localhost`).
 - The PDF export loads the CV page from inside the container, without IAP. It sends a random token generated when the server starts (`x-zen-cv-internal-token`), which no one outside the process knows.
 - When a token is refused, the server logs the audience it received and the one it expected. If every call answers `401` after a deploy, compare the two in the Cloud Run logs and fix `IAP_AUDIENCE`.

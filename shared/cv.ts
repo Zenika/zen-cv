@@ -33,7 +33,8 @@ export const cvSchema = z.object({
 export type Realisation = z.infer<typeof realisationSchema>
 export type Experience = z.infer<typeof experienceSchema>
 export type UserData = z.infer<typeof cvSchema>
-export type CurrentUser = { email: string; name: string }
+export type Relation = { value: string; type: string }
+export type CurrentUser = { email: string; name: string; title?: string; relations?: Relation[] }
 export type CvSummary = Pick<UserData, 'firstname' | 'name' | 'title'> & {
   id: string
   ownerEmail: string | null
