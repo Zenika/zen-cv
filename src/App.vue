@@ -10,7 +10,7 @@ const user = useCurrentUser()
     Connecté en tant que <strong class="app-user__name" :title="user.email">{{ user.name }}</strong>
   </p>
   <!-- Keyed so switching CV mounts a fresh page instead of reusing the previous one's state -->
-  <RouterView :key="$route.fullPath" />
+  <RouterView :key="$route.path" />
 </template>
 
 <style lang="scss">

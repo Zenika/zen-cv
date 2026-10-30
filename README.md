@@ -113,7 +113,7 @@ View  ──uses──▶  Composable  ──calls──▶  Service  ──fetc
 ```
 
 - **Views** (`src/views/`) are the pages, one per route:
-  - `HomeView` (`/`) lists the CVs.
+  - `HomeView` (`/`) lists the CVs by name only, with a search by name (`shared/names.ts`: accents, case and word order are ignored). The search is kept in the URL (`/?q=…`).
   - `CvView` (`/cv/:id`) shows and edits one CV, and offers the PDF download. It gets the route `id` as a prop (`props: true`).
   - Because `App.vue` keys `<RouterView>` on the full path, switching CV mounts a fresh view.
 - **Composables** (`src/composables/`) hold a page's state and behaviour.

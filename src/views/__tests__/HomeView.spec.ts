@@ -34,7 +34,7 @@ const raphael: CvSummary = {
   ownerEmail: null,
 }
 
-async function mountHome(cvs: CvSummary[] = [camille]) {
+async function mountHome(cvs: CvSummary[] = [camille], path = '/') {
   vi.mocked(getCvs).mockResolvedValue(cvs)
   const router = createRouter({
     history: createMemoryHistory(),
@@ -43,7 +43,7 @@ async function mountHome(cvs: CvSummary[] = [camille]) {
       { path: '/cv/:id', component: { template: '<p>CV</p>' } },
     ],
   })
-  await router.push('/')
+  await router.push(path)
   const wrapper = mount(HomeView, { global: { plugins: [router] } })
   await flushPromises()
   return { wrapper, router }
@@ -87,7 +87,7 @@ describe('HomeView welcome', () => {
       welcome(wrapper)
         .findAll('.home__candidate')
         .map((item) => item.text()),
-    ).toEqual(["Raphaël Grand · Développeur C'est mon CV"])
+    ).toEqual(["Raphaël Grand C'est mon CV"])
 
     vi.mocked(getCvs).mockResolvedValue([
       camille,
@@ -141,5 +141,37 @@ describe('HomeView welcome', () => {
     await flushPromises()
     expect(importCvPdf).toHaveBeenCalledWith(file, { mine: true })
     expect(router.currentRoute.value.path).toBe('/cv/raphael-grand')
+  })
+})
+
+describe('HomeView list', () => {
+  const names = (wrapper: Awaited<ReturnType<typeof mountHome>>['wrapper']) =>
+    wrapper.findAll('.home__card').map((card) => card.text())
+
+  it('shows only the names in the cards', async () => {
+    const { wrapper } = await mountHome([camille, raphael])
+    expect(names(wrapper)).toEqual(['Camille Martin', 'Raphaël Grand'])
+    expect(wrapper.text()).not.toContain('Développeur')
+  })
+
+  it('filters the CVs by name and keeps the search in the URL', async () => {
+    const { wrapper, router } = await mountHome([camille, raphael])
+    await wrapper.find('input[type="search"]').setValue('raph')
+    await flushPromises()
+    expect(names(wrapper)).toEqual(['Raphaël Grand'])
+    expect(wrapper.find('.home__count').text()).toBe('1 CV')
+    expect(router.currentRoute.value.query).toEqual({ q: 'raph' })
+
+    await wrapper.find('input[type="search"]').setValue('')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({})
+    expect(wrapper.find('.home__count').text()).toBe('2 CVs')
+  })
+
+  it('starts from the search in the URL and says when nothing matches', async () => {
+    const { wrapper } = await mountHome([camille, raphael], '/?q=petit')
+    expect(wrapper.find<HTMLInputElement>('input[type="search"]').element.value).toBe('petit')
+    expect(names(wrapper)).toEqual([])
+    expect(wrapper.find('.home__empty').text()).toBe('Aucun CV ne correspond à « petit ».')
   })
 })
