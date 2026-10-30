@@ -168,16 +168,24 @@ All routes are under `/api`. Errors are returned as plain text in French. Every 
 | Method | Path | Response |
 | --- | --- | --- |
 | `GET` | `/api/me` | `200`: the signed-in user, `{ email, name }` (name from the Workspace directory) |
-| `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title }` |
+| `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title, ownerEmail }` |
 | `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. With `?owner=me`, the CV is the signed-in user's: if the PDF's name doesn't match their account (accents, case and word order aside), the account's name is used instead. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
 | `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header · `404` |
 | `PUT` | `/api/cvs/:id` | Replaces the whole CV. Needs `If-Match` with the version it replaces. `204` with the new version in `ETag` · `400` if the body is invalid · `404` · `412` if someone saved the CV in the meantime · `428` without `If-Match` |
+| `POST` | `/api/cvs/:id/claim` | Makes the signed-in user the owner of a CV nobody owns. `204` · `404` · `409` if the CV has an owner or the user already owns one |
 | `DELETE` | `/api/cvs/:id` | `204` · `404` |
 | `GET` | `/api/cvs/:id/pdf` | `200`: `application/pdf` · `404` · `500` if the export fails |
 
+### CV owners
+
+Each CV can have an owner, `owner_email` in the `cvs` table. It's kept outside the CV data, so saving a CV never changes it. A unique index keeps it to one CV per person. A CV gets its owner in two ways:
+
+- imported with "Importer mon CV" (`POST /api/cvs/import?owner=me`): if the PDF's name doesn't match the account (`shared/names.ts`: accents, case and word order are ignored), the account's name is used instead; a second import of one's own CV answers `409`;
+- claimed from the home page (`POST /api/cvs/:id/claim`), for CVs created before owners existed or imported for someone else.
+
 ### First visit
 
-When no CV matches the signed-in user's name (`shared/names.ts`: accents, case and word order are ignored), the home page offers to import their CV, with `?owner=me`. "Plus tard" is remembered in the browser's `localStorage`, per email. The e2e tests run as `jeanne.leroy@zenika.com` (`DEV_USER_EMAIL` in `playwright.config.ts`).
+When the signed-in user owns no CV, the home page shows a welcome card. If unowned CVs match their name, it asks "Est-ce le vôtre ?" with a "C'est mon CV" button; it always offers to import their CV. "Plus tard" is remembered in the browser's `localStorage`, per email. The user's own CV is marked "Mon CV" in the list. The e2e tests run as `jeanne.leroy@zenika.com` (`DEV_USER_EMAIL` in `playwright.config.ts`).
 
 ### Concurrent edits
 

@@ -95,6 +95,7 @@ describe('GET /api/cvs', () => {
       firstname: 'Camille',
       name: 'Martin',
       title: 'Développeuse Backend Java & Cloud',
+      ownerEmail: null,
     })
   })
 })
@@ -163,6 +164,48 @@ describe('PUT /api/cvs/:id', () => {
   it('answers 404 for an unknown CV without creating it', async () => {
     expect((await put('inconnu', seedData['camille-martin'])).status).toBe(404)
     expect(await stored('inconnu')).toBeUndefined()
+  })
+})
+
+describe('POST /api/cvs/:id/claim', () => {
+  const claim = (id: string) => app.request(`/api/cvs/${id}/claim`, { method: 'POST' })
+
+  it('makes me the owner of a CV nobody owns', async () => {
+    identity = async () => ({ email: 'Camille.Martin@zenika.com', name: 'Camille MARTIN' })
+    expect((await claim('camille-martin')).status).toBe(204)
+    expect((await repository.get('camille-martin'))!.ownerEmail).toBe('camille.martin@zenika.com')
+    const summaries: { id: string; ownerEmail: string | null }[] = await (
+      await app.request('/api/cvs')
+    ).json()
+    expect(summaries.find(({ id }) => id === 'camille-martin')!.ownerEmail).toBe(
+      'camille.martin@zenika.com',
+    )
+  })
+
+  it('refuses a CV someone already owns', async () => {
+    await claim('camille-martin')
+    identity = async () => ({ email: 'jeanne.leroy@zenika.com', name: 'Jeanne LEROY' })
+    const response = await claim('camille-martin')
+    expect(response.status).toBe(409)
+    expect(await response.text()).toBe('ce CV appartient déjà à quelqu’un d’autre.')
+    expect((await repository.get('camille-martin'))!.ownerEmail).toBe('camille.martin@zenika.com')
+  })
+
+  it('refuses a second CV for the same person', async () => {
+    await claim('camille-martin')
+    const response = await claim('raphael-grand')
+    expect(response.status).toBe(409)
+    expect((await repository.get('raphael-grand'))!.ownerEmail).toBeNull()
+  })
+
+  it('answers 404 for an unknown CV', async () => {
+    expect((await claim('inconnu')).status).toBe(404)
+  })
+
+  it('keeps the owner when the CV is saved', async () => {
+    await claim('camille-martin')
+    await put('camille-martin', { ...seedData['camille-martin']!, title: 'Architecte' })
+    expect((await repository.get('camille-martin'))!.ownerEmail).toBe('camille.martin@zenika.com')
   })
 })
 
@@ -236,6 +279,18 @@ describe('POST /api/cvs/import', () => {
       ],
     })
     expect(await stored('jeanne-leroy')).toMatchObject({ firstname: 'Jeanne', name: 'Leroy' })
+    expect((await repository.get('jeanne-leroy'))!.ownerEmail).toBe('jeanne.leroy@zenika.com')
+  })
+
+  it('refuses a second CV of my own', async () => {
+    identity = async () => ({ email: 'Jeanne.Leroy@zenika.com', name: 'Jeanne LEROY' })
+    expect((await importPdf('%PDF-1.7 fake', '?owner=me')).status).toBe(201)
+    const response = await importPdf('%PDF-1.7 fake', '?owner=me')
+    expect(response.status).toBe(409)
+    expect(await response.text()).toBe(
+      'vous avez déjà un CV : supprimez-le avant d’en importer un autre.',
+    )
+    expect((await repository.list()).length).toBe(Object.keys(seedData).length + 1)
   })
 
   it('keeps the name of a CV imported as mine when it matches my account', async () => {
@@ -248,6 +303,7 @@ describe('POST /api/cvs/import', () => {
   it('ignores my account for a CV imported for someone else', async () => {
     identity = async () => ({ email: 'jeanne.leroy@zenika.com', name: 'Jeanne LEROY' })
     expect((await (await importPdf('%PDF-1.7 fake')).json()).id).toBe('camille-martin-2')
+    expect((await repository.get('camille-martin-2'))!.ownerEmail).toBeNull()
   })
 
   it('leaves an unknown name out of the id', async () => {

@@ -38,10 +38,15 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
     expect(await seed(pool)).toEqual([])
 
     expect((await repository.list()).map(({ id }) => id)).toEqual(Object.keys(seedData))
-    expect(await repository.get('camille-martin')).toEqual({ cv: edited, version: 2 })
+    expect(await repository.get('camille-martin')).toEqual({
+      cv: edited,
+      version: 2,
+      ownerEmail: null,
+    })
     expect(await repository.get('raphael-grand')).toEqual({
       cv: seedData['raphael-grand'],
       version: 1,
+      ownerEmail: null,
     })
   })
 
@@ -65,6 +70,7 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
     expect(await repository.get('camille-martin')).toEqual({
       cv: { ...cv, title: 'Nouveau' },
       version: 2,
+      ownerEmail: null,
     })
     expect(after[0].updated_at.getTime()).toBeGreaterThan(before[0].updated_at.getTime())
 
@@ -91,10 +97,40 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
     const repository = createPostgresRepository(pool)
     const seedData = await readSeed()
     const imported = { ...seedData['camille-martin']!, title: 'Importé' }
-    expect(await repository.create('camille-martin', imported)).toBe(false)
+    expect(await repository.create('camille-martin', imported)).toBe('id-taken')
     expect((await repository.get('camille-martin'))!.cv).toEqual(seedData['camille-martin'])
-    expect(await repository.create('camille-martin-2', imported)).toBe(true)
-    expect(await repository.get('camille-martin-2')).toEqual({ cv: imported, version: 1 })
+    expect(await repository.create('camille-martin-2', imported)).toBe('created')
+    expect(await repository.get('camille-martin-2')).toEqual({
+      cv: imported,
+      version: 1,
+      ownerEmail: null,
+    })
+  })
+
+  it('gives each person one CV at most', async () => {
+    await seed(pool)
+    const repository = createPostgresRepository(pool)
+    const { cv } = (await repository.get('camille-martin'))!
+    expect(await repository.create('mien', cv, 'jeanne.leroy@zenika.com')).toBe('created')
+    expect(await repository.create('autre', cv, 'jeanne.leroy@zenika.com')).toBe('owner-taken')
+    expect(await repository.get('autre')).toBeUndefined()
+
+    expect(await repository.setOwner('camille-martin', 'jeanne.leroy@zenika.com')).toBe(
+      'owner-taken',
+    )
+    expect(await repository.setOwner('camille-martin', 'camille.martin@zenika.com')).toBe('set')
+    expect(await repository.setOwner('camille-martin', 'paul.durand@zenika.com')).toBe(
+      'already-owned',
+    )
+    expect(await repository.setOwner('inconnu', 'paul.durand@zenika.com')).toBe('not-found')
+    expect((await repository.list()).map(({ id, ownerEmail }) => ({ id, ownerEmail }))).toEqual([
+      { id: 'raphael-grand', ownerEmail: null },
+      { id: 'camille-martin', ownerEmail: 'camille.martin@zenika.com' },
+      { id: 'mien', ownerEmail: 'jeanne.leroy@zenika.com' },
+    ])
+
+    await repository.delete('mien')
+    expect(await repository.create('nouveau', cv, 'jeanne.leroy@zenika.com')).toBe('created')
   })
 
   it('deletes an existing CV only', async () => {

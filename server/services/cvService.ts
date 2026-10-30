@@ -4,7 +4,7 @@ import type { PdfImporter } from '../import/pdfImporter.ts'
 import type { PdfRenderer } from '../pdf/pdfRenderer.ts'
 import type { CvRepository } from '../repository/cvRepository.ts'
 import { missingValue, splitName } from '../import/parseCv.ts'
-import { CvConflictError, CvNotFoundError } from './errors.ts'
+import { CvConflictError, CvNotFoundError, CvOwnerError } from './errors.ts'
 
 function slugify(parts: string[]) {
   return (
@@ -17,6 +17,8 @@ function slugify(parts: string[]) {
       .replace(/^-|-$/g, '') || 'cv'
   )
 }
+
+const alreadyOwner = 'vous avez déjà un CV : supprimez-le avant d’en importer un autre.'
 
 export type CvService = ReturnType<typeof createCvService>
 
@@ -35,12 +37,15 @@ export function createCvService(
     get,
 
     async list(): Promise<CvSummary[]> {
-      return (await repository.list()).map(({ id, cv: { firstname, name, title } }) => ({
-        id,
-        firstname,
-        name,
-        title,
-      }))
+      return (await repository.list()).map(
+        ({ id, cv: { firstname, name, title }, ownerEmail }) => ({
+          id,
+          firstname,
+          name,
+          title,
+          ownerEmail,
+        }),
+      )
     },
 
     async replace(id: string, cv: UserData, version: number) {
@@ -48,6 +53,14 @@ export function createCvService(
       if (result === 'not-found') throw new CvNotFoundError(id)
       if (result === 'conflict') throw new CvConflictError()
       return result.version
+    },
+
+    async claim(id: string, user: CurrentUser) {
+      const result = await repository.setOwner(id, user.email.toLowerCase())
+      if (result === 'not-found') throw new CvNotFoundError(id)
+      if (result === 'already-owned')
+        throw new CvOwnerError('ce CV appartient déjà à quelqu’un d’autre.')
+      if (result === 'owner-taken') throw new CvOwnerError(alreadyOwner)
     },
 
     async delete(id: string) {
@@ -68,7 +81,9 @@ export function createCvService(
       const base = slugify([cv.firstname, cv.name].filter((part) => part !== missingValue))
       for (let attempt = 1; ; attempt++) {
         const id = attempt === 1 ? base : `${base}-${attempt}`
-        if (await repository.create(id, cv)) return { id, warnings }
+        const result = await repository.create(id, cv, owner?.email.toLowerCase())
+        if (result === 'owner-taken') throw new CvOwnerError(alreadyOwner)
+        if (result === 'created') return { id, warnings }
       }
     },
 
