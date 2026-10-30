@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createDirectoryLookup, withDirectoryNames, type NameLookup } from '../auth/directory.ts'
+import {
+  createDirectoryLookup,
+  createUserDetails,
+  withDirectoryNames,
+  type NameLookup,
+} from '../auth/directory.ts'
 import type { Identity } from '../auth/identity.ts'
 
 function fakeGoogle(directory: Response = Response.json({ name: { fullName: 'Raphaël Grand' } })) {
@@ -40,6 +45,28 @@ describe('createDirectoryLookup', () => {
     await expect(createDirectoryLookup(fetcher)('a@zenika.com')).rejects.toThrow(
       'annuaire Google Workspace : 403 { "error": { "message": "Not Authorized to access this resource" } }',
     )
+  })
+})
+
+describe('createUserDetails', () => {
+  it('returns the full directory record and the groups, or the error of each', async () => {
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input)
+      if (url.startsWith('http://metadata.google.internal/'))
+        return Response.json({ access_token: 'token' })
+      if (url.includes('/users/')) return Response.json({ primaryEmail: 'a@zenika.com' })
+      return new Response('Not Authorized', { status: 403 })
+    })
+    expect(await createUserDetails(fetcher)('a@zenika.com')).toEqual({
+      annuaire: { primaryEmail: 'a@zenika.com' },
+      groupes: { erreur: 'groupes Google Workspace : 403 Not Authorized' },
+    })
+    expect(fetcher.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining('admin.directory.user.readonly'),
+      'https://admin.googleapis.com/admin/directory/v1/users/a%40zenika.com?projection=full',
+      expect.stringContaining('admin.directory.group.readonly'),
+      'https://admin.googleapis.com/admin/directory/v1/groups?userKey=a%40zenika.com',
+    ])
   })
 })
 
