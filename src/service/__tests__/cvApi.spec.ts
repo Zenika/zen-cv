@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { deleteCv, errorMessage, getCv, getCvPdf, getCvs, importCvPdf, saveCv } from '../cvApi'
+import {
+  deleteCv,
+  errorMessage,
+  getCv,
+  isConflict,
+  getCvPdf,
+  getCvs,
+  importCvPdf,
+  saveCv,
+} from '../cvApi'
 import type { UserData } from '../../types'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -22,15 +31,32 @@ describe('cvApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a%2Fb%20c', undefined)
   })
 
-  it('sends the whole CV as JSON when saving', async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+  it('returns the CV with its version', async () => {
+    fetchMock.mockResolvedValue(Response.json({ firstname: 'A' }, { headers: { ETag: '"3"' } }))
+    expect(await getCv('a')).toEqual({ cv: { firstname: 'A' }, version: '"3"' })
+  })
+
+  it('sends the whole CV as JSON with the version it replaces, and returns the new one', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204, headers: { ETag: '"4"' } }))
     const cv = { firstname: 'A' } as UserData
-    await saveCv('a', cv)
+    expect(await saveCv('a', cv, '"3"')).toBe('"4"')
     expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"3"' },
       body: JSON.stringify(cv),
     })
+  })
+
+  it('recognises a save refused because someone else changed the CV', async () => {
+    fetchMock.mockResolvedValue(new Response('modifié par quelqu’un d’autre.', { status: 412 }))
+    const error = await saveCv('a', {} as UserData, '"3"').catch((error: unknown) => error)
+    expect(isConflict(error)).toBe(true)
+    expect(errorMessage(error)).toBe('modifié par quelqu’un d’autre.')
+
+    fetchMock.mockResolvedValue(new Response('refusé.', { status: 400 }))
+    expect(
+      isConflict(await saveCv('a', {} as UserData, '"3"').catch((error: unknown) => error)),
+    ).toBe(false)
   })
 
   it('sends the PDF to import and returns the new id with the warnings', async () => {

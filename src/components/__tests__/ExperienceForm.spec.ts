@@ -30,9 +30,15 @@ describe('ExperienceForm', () => {
 
   it('starts empty, with one realisation and one technical environment', () => {
     const wrapper = mount(ExperienceForm)
-    expect(wrapper.findAll<HTMLInputElement>('input').map((input) => input.element.value)).toEqual(
-      ['', '', '', '', '', 'Environnement technique', ''],
-    )
+    expect(wrapper.findAll<HTMLInputElement>('input').map((input) => input.element.value)).toEqual([
+      '',
+      '',
+      '',
+      '',
+      '',
+      'Environnement technique',
+      '',
+    ])
   })
 
   it('builds the experience from the fields', async () => {

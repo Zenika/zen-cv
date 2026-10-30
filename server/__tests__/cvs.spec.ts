@@ -18,13 +18,15 @@ let renderedIds: string[]
 let parsed: ParsedCv | Error
 let identity: Identity
 
-function put(id: string, body: unknown) {
+function put(id: string, body: unknown, ifMatch: string | null = '"1"') {
   return app.request(`/api/cvs/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(ifMatch && { 'If-Match': ifMatch }) },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   })
 }
+
+const stored = async (id: string) => (await repository.get(id))?.cv
 
 beforeEach(async () => {
   seedData = await readSeed()
@@ -73,7 +75,7 @@ describe('authentication', () => {
         'authentification requise : rechargez la page pour vous reconnecter.',
       )
     }
-    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+    expect(await stored('camille-martin')).toEqual(seedData['camille-martin'])
   })
 })
 
@@ -98,9 +100,10 @@ describe('GET /api/cvs', () => {
 })
 
 describe('GET /api/cvs/:id', () => {
-  it('returns the CV', async () => {
+  it('returns the CV with its version as ETag', async () => {
     const response = await app.request('/api/cvs/camille-martin')
     expect(response.status).toBe(200)
+    expect(response.headers.get('ETag')).toBe('"1"')
     expect(await response.json()).toEqual(seedData['camille-martin'])
   })
 
@@ -112,23 +115,45 @@ describe('GET /api/cvs/:id', () => {
 })
 
 describe('PUT /api/cvs/:id', () => {
-  it('replaces the CV', async () => {
+  it('replaces the CV and returns its new version', async () => {
     const cv = { ...seedData['camille-martin']!, title: 'Architecte Cloud' }
-    expect((await put('camille-martin', cv)).status).toBe(204)
-    expect(await repository.get('camille-martin')).toEqual(cv)
+    const response = await put('camille-martin', cv)
+    expect(response.status).toBe(204)
+    expect(response.headers.get('ETag')).toBe('"2"')
+    expect(await stored('camille-martin')).toEqual(cv)
+    expect((await app.request('/api/cvs/camille-martin')).headers.get('ETag')).toBe('"2"')
+  })
+
+  it('refuses to overwrite a change made since the CV was loaded', async () => {
+    const cv = seedData['camille-martin']!
+    await put('camille-martin', { ...cv, title: 'Première' })
+    const response = await put('camille-martin', { ...cv, title: 'Seconde' }, '"1"')
+    expect(response.status).toBe(412)
+    expect(await response.text()).toBe(
+      'ce CV a été modifié par quelqu’un d’autre depuis que vous l’avez ouvert. Rechargez-le pour voir ses modifications.',
+    )
+    expect((await stored('camille-martin'))!.title).toBe('Première')
+  })
+
+  it('requires the version of the CV being replaced', async () => {
+    for (const ifMatch of [null, '*', 'W/"1"', '1']) {
+      const response = await put('camille-martin', seedData['raphael-grand'], ifMatch)
+      expect(response.status).toBe(428)
+    }
+    expect(await stored('camille-martin')).toEqual(seedData['camille-martin'])
   })
 
   it('drops unknown fields', async () => {
     const cv = seedData['camille-martin']!
     await put('camille-martin', { ...cv, unexpected: true })
-    expect(await repository.get('camille-martin')).toEqual(cv)
+    expect(await stored('camille-martin')).toEqual(cv)
   })
 
   it('rejects an invalid CV with the faulty field and keeps the data', async () => {
     const response = await put('camille-martin', { ...seedData['camille-martin']!, title: 42 })
     expect(response.status).toBe(400)
     expect(await response.text()).toContain('→ at title')
-    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+    expect(await stored('camille-martin')).toEqual(seedData['camille-martin'])
   })
 
   it('rejects malformed JSON', async () => {
@@ -137,7 +162,7 @@ describe('PUT /api/cvs/:id', () => {
 
   it('answers 404 for an unknown CV without creating it', async () => {
     expect((await put('inconnu', seedData['camille-martin'])).status).toBe(404)
-    expect(await repository.get('inconnu')).toBeUndefined()
+    expect(await stored('inconnu')).toBeUndefined()
   })
 })
 
@@ -145,8 +170,8 @@ describe('DELETE /api/cvs/:id', () => {
   it('deletes the CV', async () => {
     const response = await app.request('/api/cvs/camille-martin', { method: 'DELETE' })
     expect(response.status).toBe(204)
-    expect(await repository.get('camille-martin')).toBeUndefined()
-    expect(await repository.get('raphael-grand')).toEqual(seedData['raphael-grand'])
+    expect(await stored('camille-martin')).toBeUndefined()
+    expect(await stored('raphael-grand')).toEqual(seedData['raphael-grand'])
   })
 
   it('answers 404 for an unknown CV', async () => {
@@ -189,8 +214,8 @@ describe('POST /api/cvs/import', () => {
       id: 'camille-martin-2',
       warnings: ['Bloc des compétences introuvable.'],
     })
-    expect(await repository.get('camille-martin-2')).toEqual(seedData['camille-martin'])
-    expect(await repository.get('camille-martin')).toEqual(seedData['camille-martin'])
+    expect(await stored('camille-martin-2')).toEqual(seedData['camille-martin'])
+    expect(await stored('camille-martin')).toEqual(seedData['camille-martin'])
   })
 
   it('leaves an unknown name out of the id', async () => {

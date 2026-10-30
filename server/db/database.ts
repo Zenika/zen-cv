@@ -18,4 +18,5 @@ export async function migrate(pool: pg.Pool) {
       updated_at timestamptz not null default clock_timestamp()
     )
   `)
+  await pool.query('alter table cvs add column if not exists version integer not null default 1')
 }

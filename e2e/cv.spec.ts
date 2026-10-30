@@ -84,3 +84,36 @@ test('explains why an unknown CV cannot be loaded', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText("Le CV n'a pas pu être chargé")
   await expect(page.getByRole('alert')).toContainText('inconnu')
 })
+
+test('refuses to overwrite a change made in another window', async ({ browser }) => {
+  const [mine, theirs] = await Promise.all([browser.newPage(), browser.newPage()])
+  await mine.goto('/cv/raphael-grand')
+  await theirs.goto('/cv/raphael-grand')
+
+  async function editBio(page: Page, bio: string) {
+    await page.getByRole('button', { name: 'Modifier la bio' }).click()
+    await page.getByRole('textbox', { name: 'Bio' }).fill(bio)
+    await page.getByRole('button', { name: 'Enregistrer' }).click()
+  }
+
+  await editBio(theirs, 'Bio enregistrée par l’autre fenêtre.')
+  await expect(theirs.locator('.cv-page__bio-text')).toHaveText(
+    'Bio enregistrée par l’autre fenêtre.',
+  )
+
+  await editBio(mine, 'Bio écrite sans voir l’autre modification.')
+  const alert = mine.getByRole('alert')
+  await expect(alert).toContainText('modifié par quelqu’un d’autre')
+  await alert.getByRole('button', { name: 'Recharger le CV' }).click()
+  await expect(mine.locator('.cv-page__bio-text')).toHaveText(
+    'Bio enregistrée par l’autre fenêtre.',
+  )
+
+  await editBio(mine, 'Bio enregistrée après rechargement.')
+  await expect(mine.getByRole('alert')).toHaveCount(0)
+  await theirs.reload()
+  await expect(theirs.locator('.cv-page__bio-text')).toHaveText(
+    'Bio enregistrée après rechargement.',
+  )
+  await Promise.all([mine.close(), theirs.close()])
+})

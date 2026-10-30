@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getCv, getCvPdf, saveCv } from '../../service/cvApi'
+import { getCv, getCvPdf, RequestError, saveCv } from '../../service/cvApi'
 import type { UserData } from '../../types'
 import { useCv } from '../useCv'
 
@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 async function loaded() {
-  vi.mocked(getCv).mockResolvedValue(cv)
+  vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"' })
   const state = useCv('camille')
   await state.load()
   return state
@@ -41,7 +41,7 @@ describe('useCv', () => {
     expect(current.value).toBeNull()
     expect(loadError.value).toBe('le serveur est injoignable.')
 
-    vi.mocked(getCv).mockResolvedValue(cv)
+    vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"' })
     await load()
     expect(current.value).toEqual(cv)
     expect(loadError.value).toBeNull()
@@ -49,15 +49,47 @@ describe('useCv', () => {
 
   it('saves the merged CV and shows it once saved', async () => {
     const { cv: current, save } = await loaded()
-    let resolve!: () => void
+    let resolve!: (version: string) => void
     vi.mocked(saveCv).mockReturnValue(new Promise((done) => (resolve = done)))
 
     const saving = save({ title: 'Architecte' })
     expect(current.value?.title).toBe('Développeuse')
-    resolve()
+    resolve('"2"')
     expect(await saving).toBe(true)
-    expect(saveCv).toHaveBeenCalledWith('camille', { ...cv, title: 'Architecte' })
+    expect(saveCv).toHaveBeenCalledWith('camille', { ...cv, title: 'Architecte' }, '"1"')
     expect(current.value?.title).toBe('Architecte')
+  })
+
+  it('sends each save after the previous one, with the version it returned', async () => {
+    const { save } = await loaded()
+    let resolveFirst!: (version: string) => void
+    vi.mocked(saveCv)
+      .mockReturnValueOnce(new Promise((done) => (resolveFirst = done)))
+      .mockResolvedValueOnce('"3"')
+
+    const first = save({ title: 'Premier' }, { optimistic: true })
+    const second = save({ bio: 'Seconde' }, { optimistic: true })
+    await Promise.resolve()
+    expect(saveCv).toHaveBeenCalledOnce()
+    resolveFirst('"2"')
+    expect(await Promise.all([first, second])).toEqual([true, true])
+    expect(saveCv).toHaveBeenLastCalledWith(
+      'camille',
+      { ...cv, title: 'Premier', bio: 'Seconde' },
+      '"2"',
+    )
+  })
+
+  it('flags a save refused because someone else changed the CV', async () => {
+    const { save, saveError, conflict } = await loaded()
+    vi.mocked(saveCv).mockRejectedValueOnce(new RequestError('modifié ailleurs.', 412))
+    expect(await save({ title: 'Architecte' })).toBe(false)
+    expect(saveError.value).toBe('modifié ailleurs.')
+    expect(conflict.value).toBe(true)
+
+    vi.mocked(saveCv).mockRejectedValueOnce(new RequestError('refusé.', 400))
+    await save({ title: 'Architecte' })
+    expect(conflict.value).toBe(false)
   })
 
   it('keeps the CV unchanged and exposes the error when saving fails', async () => {
@@ -67,7 +99,7 @@ describe('useCv', () => {
     expect(current.value).toEqual(cv)
     expect(saveError.value).toBe('refusé.')
 
-    vi.mocked(saveCv).mockResolvedValue()
+    vi.mocked(saveCv).mockResolvedValue('"2"')
     expect(await save({ title: 'Architecte' })).toBe(true)
     expect(saveError.value).toBeNull()
   })

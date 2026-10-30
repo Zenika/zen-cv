@@ -170,10 +170,14 @@ All routes are under `/api`. Errors are returned as plain text in French. Every 
 | `GET` | `/api/me` | `200`: the signed-in user, `{ email, name }` (name from the Workspace directory) |
 | `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title }` |
 | `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
-| `GET` | `/api/cvs/:id` | `200`: the full CV · `404` |
-| `PUT` | `/api/cvs/:id` | Replaces the whole CV. `204` · `400` if the body is invalid · `404` |
+| `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header · `404` |
+| `PUT` | `/api/cvs/:id` | Replaces the whole CV. Needs `If-Match` with the version it replaces. `204` with the new version in `ETag` · `400` if the body is invalid · `404` · `412` if someone saved the CV in the meantime · `428` without `If-Match` |
 | `DELETE` | `/api/cvs/:id` | `204` · `404` |
 | `GET` | `/api/cvs/:id/pdf` | `200`: `application/pdf` · `404` · `500` if the export fails |
+
+### Concurrent edits
+
+Each CV has a `version`, increased by every save. The page keeps the version it loaded and sends it back in `If-Match`; the update only applies `where version = <that version>`, so two saves made from the same version can't both succeed. The second one gets a `412`, and the page offers to reload the CV, losing its unsaved change. Saves from one page are sent one after another, each with the version returned by the previous one.
 
 ### Authentication
 

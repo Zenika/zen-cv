@@ -5,6 +5,15 @@ export class CvNotFoundError extends Error {
   }
 }
 
+export class CvConflictError extends Error {
+  constructor() {
+    super(
+      'ce CV a été modifié par quelqu’un d’autre depuis que vous l’avez ouvert. Rechargez-le pour voir ses modifications.',
+    )
+    this.name = 'CvConflictError'
+  }
+}
+
 export class PdfExportError extends Error {
   constructor(message: string) {
     super(message)
