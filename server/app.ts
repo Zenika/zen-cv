@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
-import { decodeJwt } from 'jose'
 import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { createPdfRenderer } from './pdf/pdfRenderer.ts'
@@ -9,12 +8,7 @@ import { createPostgresRepository } from './repository/postgresRepository.ts'
 import { createCvRoutes } from './routes/cvs.ts'
 import { createCvService, type CvService } from './services/cvService.ts'
 import type { CurrentUser } from '../shared/cv.ts'
-import {
-  createDirectoryLookup,
-  createUserDetails,
-  withDirectoryNames,
-  type UserDetails,
-} from './auth/directory.ts'
+import { createDirectoryLookup, withDirectoryProfiles } from './auth/directory.ts'
 import {
   createFixedIdentity,
   createIapIdentity,
@@ -33,7 +27,7 @@ import {
 
 z.config(z.locales.fr())
 
-export function createApp(service: CvService, identity: Identity, userDetails?: UserDetails) {
+export function createApp(service: CvService, identity: Identity) {
   return new Hono<{ Variables: { user: CurrentUser } }>()
     .basePath('/api')
     .use(async (c, next) => {
@@ -44,14 +38,6 @@ export function createApp(service: CvService, identity: Identity, userDetails?: 
       await next()
     })
     .get('/me', (c) => c.json(c.var.user))
-    .get('/me/details', async (c) => {
-      if (!userDetails) return c.text('détails disponibles uniquement derrière IAP.', 404)
-      const assertion = c.req.header('x-goog-iap-jwt-assertion')
-      return c.json({
-        iap: assertion ? decodeJwt(assertion) : null,
-        ...(await userDetails(c.var.user.email)),
-      })
-    })
     .route('/cvs', createCvRoutes(service))
     .notFound((c) => c.text('ressource introuvable.', 404))
     .onError((error, c) => {
@@ -77,7 +63,7 @@ type ServerOptions = {
 
 function createIdentity({ iapAudience, devUserEmail, production }: ServerOptions) {
   if (iapAudience)
-    return withDirectoryNames(createIapIdentity(iapAudience), createDirectoryLookup())
+    return withDirectoryProfiles(createIapIdentity(iapAudience), createDirectoryLookup())
   if (production && !devUserEmail)
     throw new Error(
       'IAP_AUDIENCE est absent : impossible de vérifier l’utilisateur connecté en production.',
@@ -97,11 +83,7 @@ export function createServerApp(options: ServerOptions) {
   })
   const service = createCvService(createPostgresRepository(pool), pdfRenderer, createPdfImporter())
   return {
-    app: createApp(
-      service,
-      identity,
-      options.iapAudience ? createUserDetails() : undefined,
-    ),
+    app: createApp(service, identity),
     migrate: () => migrate(pool),
     close: async () => {
       await Promise.all([pdfRenderer.close(), pool.end()])

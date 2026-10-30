@@ -38,6 +38,7 @@ describe('IAP identity', () => {
     expect(await identity(await withAssertion(assertion()))).toEqual({
       email: 'camille.martin@zenika.com',
       name: 'Camille Martin',
+      relations: [],
     })
   })
 
@@ -82,6 +83,7 @@ describe('fixed identity', () => {
     expect(await createFixedIdentity('dev@localhost')(new Headers())).toEqual({
       email: 'dev@localhost',
       name: 'Dev',
+      relations: [],
     })
   })
 })
