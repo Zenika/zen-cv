@@ -5,7 +5,7 @@ import InlineEdit from './InlineEdit.vue'
 import type { SaveCv } from '../composables/useCv'
 import type { UserData } from '../types'
 
-defineProps<{ cv: UserData; save: SaveCv }>()
+defineProps<{ cv: UserData; editable: boolean; save: SaveCv }>()
 </script>
 
 <template>
@@ -25,6 +25,7 @@ defineProps<{ cv: UserData; save: SaveCv }>()
         >
           {{ cv.title }}
           <button
+            v-if="editable"
             type="button"
             class="icon-button icon-button--small"
             aria-label="Modifier le titre"

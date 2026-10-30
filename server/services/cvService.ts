@@ -4,7 +4,8 @@ import type { PdfImporter } from '../import/pdfImporter.ts'
 import type { PdfRenderer } from '../pdf/pdfRenderer.ts'
 import type { CvRepository } from '../repository/cvRepository.ts'
 import { missingValue, splitName } from '../import/parseCv.ts'
-import { CvConflictError, CvNotFoundError, CvOwnerError } from './errors.ts'
+import { canEdit, type RelationsOf } from '../auth/permissions.ts'
+import { CvConflictError, CvForbiddenError, CvNotFoundError, CvOwnerError } from './errors.ts'
 
 function slugify(parts: string[]) {
   return (
@@ -26,6 +27,7 @@ export function createCvService(
   repository: CvRepository,
   pdfRenderer: Pick<PdfRenderer, 'render'>,
   pdfImporter: PdfImporter,
+  relationsOf: RelationsOf = async () => [],
 ) {
   async function get(id: string) {
     const cv = await repository.get(id)
@@ -33,8 +35,16 @@ export function createCvService(
     return cv
   }
 
+  async function assertCanEdit(id: string, user: CurrentUser) {
+    if (!(await canEdit(user, (await get(id)).ownerEmail, relationsOf)))
+      throw new CvForbiddenError()
+  }
+
   return {
-    get,
+    async get(id: string, user: CurrentUser) {
+      const cv = await get(id)
+      return { ...cv, editable: await canEdit(user, cv.ownerEmail, relationsOf) }
+    },
 
     async list(): Promise<CvSummary[]> {
       return (await repository.list()).map(
@@ -48,7 +58,8 @@ export function createCvService(
       )
     },
 
-    async replace(id: string, cv: UserData, version: number) {
+    async replace(id: string, cv: UserData, version: number, user: CurrentUser) {
+      await assertCanEdit(id, user)
       const result = await repository.update(id, cv, version)
       if (result === 'not-found') throw new CvNotFoundError(id)
       if (result === 'conflict') throw new CvConflictError()
@@ -63,7 +74,8 @@ export function createCvService(
       if (result === 'owner-taken') throw new CvOwnerError(alreadyOwner)
     },
 
-    async delete(id: string) {
+    async delete(id: string, user: CurrentUser) {
+      await assertCanEdit(id, user)
       if (!(await repository.delete(id))) throw new CvNotFoundError(id)
     },
 

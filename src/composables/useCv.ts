@@ -12,6 +12,7 @@ export function useCv(id: string) {
   const loadError = ref<string | null>(null)
   const saveError = ref<string | null>(null)
   const conflict = ref(false)
+  const editable = ref(false)
   const exportError = ref<string | null>(null)
   const isExporting = ref(false)
   let version = ''
@@ -23,6 +24,7 @@ export function useCv(id: string) {
       const loaded = await getCv(id)
       cv.value = loaded.cv
       version = loaded.version
+      editable.value = loaded.editable
     } catch (error) {
       loadError.value = errorMessage(error)
     }
@@ -68,5 +70,16 @@ export function useCv(id: string) {
     }
   }
 
-  return { cv, loadError, load, saveError, conflict, save, exportError, isExporting, exportPdf }
+  return {
+    cv,
+    editable,
+    loadError,
+    load,
+    saveError,
+    conflict,
+    save,
+    exportError,
+    isExporting,
+    exportPdf,
+  }
 }

@@ -59,6 +59,7 @@ Then open http://localhost:5173.
 | `STATIC_ROOT` | start | Folder containing the built front end. Default `dist`. |
 | `IAP_AUDIENCE` | production | Expected audience of the IAP token, `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE`. Set by the deploy workflow. When it is set, every `/api` call must carry a valid IAP token. |
 | `DEV_USER_EMAIL` | dev, start | Signed-in user when `IAP_AUDIENCE` is not set. Default `dev@localhost`. In production (`NODE_ENV=production`) the server refuses to start without `IAP_AUDIENCE`, unless this is set. |
+| `DEV_USER_TITLE` | dev, start | Job title of `DEV_USER_EMAIL`, e.g. `Business Developer` to edit every CV locally (see [Who can edit a CV](#who-can-edit-a-cv)). Unset by default. |
 
 `.env.local` is ignored by git. Never commit a connection string.
 
@@ -170,10 +171,10 @@ All routes are under `/api`. Errors are returned as plain text in French. Every 
 | `GET` | `/api/me` | `200`: the signed-in user, `{ email, name, title?, relations }` (name, job title and relations from the Workspace directory) |
 | `GET` | `/api/cvs` | `200`: list of `{ id, firstname, name, title, ownerEmail }` |
 | `POST` | `/api/cvs/import` | Body: a PDF from the Zenika template. With `?owner=me`, the CV is the signed-in user's: if the PDF's name doesn't match their account (accents, case and word order aside), the account's name is used instead. `201`: `{ id, warnings }` · `400` if it isn't a PDF · `413` over 10 MB · `422` if it can't be read |
-| `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header · `404` |
-| `PUT` | `/api/cvs/:id` | Replaces the whole CV. Needs `If-Match` with the version it replaces. `204` with the new version in `ETag` · `400` if the body is invalid · `404` · `412` if someone saved the CV in the meantime · `428` without `If-Match` |
+| `GET` | `/api/cvs/:id` | `200`: the full CV, with its version in the `ETag` header and `Allow` telling whether I can edit it · `404` |
+| `PUT` | `/api/cvs/:id` | Replaces the whole CV. Needs `If-Match` with the version it replaces. `204` with the new version in `ETag` · `400` if the body is invalid · `404` · `403` if I can't edit it · `412` if someone saved the CV in the meantime · `428` without `If-Match` |
 | `POST` | `/api/cvs/:id/claim` | Makes the signed-in user the owner of a CV nobody owns. `204` · `404` · `409` if the CV has an owner or the user already owns one |
-| `DELETE` | `/api/cvs/:id` | `204` · `404` |
+| `DELETE` | `/api/cvs/:id` | `204` · `403` if I can't edit it · `404` |
 | `GET` | `/api/cvs/:id/pdf` | `200`: `application/pdf` · `404` · `500` if the export fails |
 
 ### CV owners
@@ -182,6 +183,16 @@ Each CV can have an owner, `owner_email` in the `cvs` table. It's kept outside t
 
 - imported with "Importer mon CV" (`POST /api/cvs/import?owner=me`): if the PDF's name doesn't match the account (`shared/names.ts`: accents, case and word order are ignored), the account's name is used instead; a second import of one's own CV answers `409`;
 - claimed from the home page (`POST /api/cvs/:id/claim`), for CVs created before owners existed or imported for someone else.
+
+### Who can edit a CV
+
+Everyone signed in can read every CV, export it and import new ones. Changing or deleting a CV (`PUT` and `DELETE /api/cvs/:id`) is allowed only to (`server/auth/permissions.ts`):
+
+- its owner;
+- the owner's manager: the signed-in email is a `manager` relation of the owner in the Workspace directory;
+- anyone whose directory job title is "Business Developer" or "Directeur d’agence" (case, accents and apostrophe style are ignored). They are the only ones who can change a CV nobody owns.
+
+Anyone else gets a `403`. `GET /api/cvs/:id` answers `Allow: GET, PUT, DELETE` when the signed-in user can edit the CV, `Allow: GET` otherwise; the CV page then hides every edit button. Owners' relations come from the same cached directory lookup as the signed-in user's profile. The e2e user is a Business Developer (`DEV_USER_TITLE` in `playwright.config.ts`).
 
 ### First visit
 
@@ -196,7 +207,7 @@ Each CV has a `version`, increased by every save. The page keeps the version it 
 In production, IAP signs in the user before any request reaches the app, and adds a signed token, `x-goog-iap-jwt-assertion`. `server/auth/identity.ts` checks its signature (Google's public keys), issuer and audience (`IAP_AUDIENCE`), then reads the email. The plain `x-goog-authenticated-user-email` header is never trusted.
 
 - The full name comes from the Google Workspace directory (`server/auth/directory.ts`). The runtime service account has a read-only Workspace admin role (Users > Read): the app asks Cloud Run's metadata server for a token with the `admin.directory.user.readonly` scope and reads the user's name, job title (`organizations[].title`, the primary organization first) and relations (`relations[]`, `{ value, type }`, e.g. their manager). Profiles are cached for 12 hours. If the directory can't be reached, the name is built from the address (`prenom.nom@…` → "Prenom Nom", without accents) with no title and no relations, the reason is logged (`profil de … introuvable dans l’annuaire`) and the directory is asked again 5 minutes later.
-- Locally and in the e2e tests there is no IAP: the user is `DEV_USER_EMAIL` (default `dev@localhost`).
+- Locally and in the e2e tests there is no IAP: the user is `DEV_USER_EMAIL` (default `dev@localhost`), with the title `DEV_USER_TITLE` if set, and no relations.
 - The PDF export loads the CV page from inside the container, without IAP. It sends a random token generated when the server starts (`x-zen-cv-internal-token`), which no one outside the process knows.
 - When a token is refused, the server logs the audience it received and the one it expected. If every call answers `401` after a deploy, compare the two in the Cloud Run logs and fix `IAP_AUDIENCE`.
 

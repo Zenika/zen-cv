@@ -32,9 +32,13 @@ describe('cvApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/cvs/a%2Fb%20c', undefined)
   })
 
-  it('returns the CV with its version', async () => {
-    fetchMock.mockResolvedValue(Response.json({ firstname: 'A' }, { headers: { ETag: '"3"' } }))
-    expect(await getCv('a')).toEqual({ cv: { firstname: 'A' }, version: '"3"' })
+  it('returns the CV with its version and whether I can edit it', async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ firstname: 'A' }, { headers: { ETag: '"3"', Allow: 'GET, PUT, DELETE' } }),
+    )
+    expect(await getCv('a')).toEqual({ cv: { firstname: 'A' }, version: '"3"', editable: true })
+    fetchMock.mockResolvedValue(Response.json({}, { headers: { Allow: 'GET' } }))
+    expect((await getCv('a')).editable).toBe(false)
   })
 
   it('sends the whole CV as JSON with the version it replaces, and returns the new one', async () => {

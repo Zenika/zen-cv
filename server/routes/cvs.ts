@@ -25,8 +25,9 @@ export function createCvRoutes(service: CvService) {
       },
     )
     .get('/:id', async (c) => {
-      const { cv, version } = await service.get(c.req.param('id'))
+      const { cv, version, editable } = await service.get(c.req.param('id'), c.var.user)
       c.header('ETag', etag(version))
+      c.header('Allow', editable ? 'GET, PUT, DELETE' : 'GET')
       return c.json(cv)
     })
     .put(
@@ -38,7 +39,12 @@ export function createCvRoutes(service: CvService) {
         const version = /^"(\d+)"$/.exec(c.req.header('If-Match') ?? '')?.[1]
         if (!version)
           return c.text('version du CV manquante : rechargez-le avant de l’enregistrer.', 428)
-        const saved = await service.replace(c.req.param('id'), c.req.valid('json'), Number(version))
+        const saved = await service.replace(
+          c.req.param('id'),
+          c.req.valid('json'),
+          Number(version),
+          c.var.user,
+        )
         return c.body(null, 204, { ETag: etag(saved) })
       },
     )
@@ -47,7 +53,7 @@ export function createCvRoutes(service: CvService) {
       return c.body(null, 204)
     })
     .delete('/:id', async (c) => {
-      await service.delete(c.req.param('id'))
+      await service.delete(c.req.param('id'), c.var.user)
       return c.body(null, 204)
     })
     .get('/:id/pdf', async (c) => {

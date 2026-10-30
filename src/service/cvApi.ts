@@ -47,7 +47,11 @@ export function getCvs() {
 
 export async function getCv(id: string) {
   const response = await request(cvUrl(id))
-  return { cv: await readJson<UserData>(response), version: response.headers.get('ETag') ?? '' }
+  return {
+    cv: await readJson<UserData>(response),
+    version: response.headers.get('ETag') ?? '',
+    editable: /\bPUT\b/.test(response.headers.get('Allow') ?? ''),
+  }
 }
 
 export async function saveCv(id: string, cv: UserData, version: string) {

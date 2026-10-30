@@ -34,3 +34,12 @@ export class CvImportError extends Error {
     this.name = 'CvImportError'
   }
 }
+
+export class CvForbiddenError extends Error {
+  constructor() {
+    super(
+      'vous ne pouvez pas modifier ce CV : seuls son propriétaire, son manager, les Business Developers et les Directeurs d’agence le peuvent.',
+    )
+    this.name = 'CvForbiddenError'
+  }
+}

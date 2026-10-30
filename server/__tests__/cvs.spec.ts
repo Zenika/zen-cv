@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { isDeepStrictEqual } from 'node:util'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { UserData } from '../../shared/cv.ts'
+import type { Relation, UserData } from '../../shared/cv.ts'
 import { createApp } from '../app.ts'
 import type { Identity } from '../auth/identity.ts'
 import type { ParsedCv } from '../import/parseCv.ts'
@@ -17,6 +17,7 @@ let app: ReturnType<typeof createApp>
 let renderedIds: string[]
 let parsed: ParsedCv | Error
 let identity: Identity
+let relations: Record<string, Relation[]>
 
 function put(id: string, body: unknown, ifMatch: string | null = '"1"') {
   return app.request(`/api/cvs/${id}`, {
@@ -46,8 +47,10 @@ beforeEach(async () => {
     },
   }
   identity = async () => ({ email: 'camille.martin@zenika.com', name: 'Camille Martin' })
-  app = createApp(createCvService(repository, pdfRenderer, pdfImporter), (headers) =>
-    identity(headers),
+  relations = {}
+  app = createApp(
+    createCvService(repository, pdfRenderer, pdfImporter, async (email) => relations[email] ?? []),
+    (headers) => identity(headers),
   )
 })
 
@@ -115,7 +118,11 @@ describe('GET /api/cvs/:id', () => {
   })
 })
 
+const ownCamilleCv = () => repository.setOwner('camille-martin', 'camille.martin@zenika.com')
+
 describe('PUT /api/cvs/:id', () => {
+  beforeEach(ownCamilleCv)
+
   it('replaces the CV and returns its new version', async () => {
     const cv = { ...seedData['camille-martin']!, title: 'Architecte Cloud' }
     const response = await put('camille-martin', cv)
@@ -167,6 +174,67 @@ describe('PUT /api/cvs/:id', () => {
   })
 })
 
+describe('edit permissions', () => {
+  const editable = async (id: string) =>
+    (await app.request(`/api/cvs/${id}`)).headers.get('Allow') === 'GET, PUT, DELETE'
+  const as = (email: string, title?: string) => {
+    identity = async () => ({ email, name: 'Quelqu’un', relations: [], ...(title && { title }) })
+  }
+  const saveTitle = () =>
+    put('camille-martin', { ...seedData['camille-martin']!, title: 'Modifié' })
+
+  beforeEach(ownCamilleCv)
+
+  it('lets the owner edit their CV', async () => {
+    as('Camille.Martin@zenika.com')
+    expect(await editable('camille-martin')).toBe(true)
+    expect((await saveTitle()).status).toBe(204)
+  })
+
+  it('lets the manager of the owner edit the CV', async () => {
+    relations['camille.martin@zenika.com'] = [
+      { value: 'assistant@zenika.com', type: 'assistant' },
+      { value: 'Manager@zenika.com', type: 'manager' },
+    ]
+    as('manager@zenika.com')
+    expect(await editable('camille-martin')).toBe(true)
+    expect((await saveTitle()).status).toBe(204)
+    as('assistant@zenika.com')
+    expect(await editable('camille-martin')).toBe(false)
+  })
+
+  it.each(['Business Developer', 'Directeur d’agence', "directeur d'Agence"])(
+    'lets a %s edit and delete any CV, even one nobody owns',
+    async (title) => {
+      as('jeanne.leroy@zenika.com', title)
+      expect(await editable('camille-martin')).toBe(true)
+      expect((await saveTitle()).status).toBe(204)
+      expect(await editable('raphael-grand')).toBe(true)
+      const response = await app.request('/api/cvs/raphael-grand', { method: 'DELETE' })
+      expect(response.status).toBe(204)
+    },
+  )
+
+  it('refuses everyone else, and keeps the CV', async () => {
+    as('jeanne.leroy@zenika.com', 'Consultante')
+    expect(await editable('camille-martin')).toBe(false)
+    expect((await app.request('/api/cvs/camille-martin')).headers.get('Allow')).toBe('GET')
+    const response = await saveTitle()
+    expect(response.status).toBe(403)
+    expect(await response.text()).toBe(
+      'vous ne pouvez pas modifier ce CV : seuls son propriétaire, son manager, les Business Developers et les Directeurs d’agence le peuvent.',
+    )
+    expect((await app.request('/api/cvs/camille-martin', { method: 'DELETE' })).status).toBe(403)
+    expect(await stored('camille-martin')).toEqual(seedData['camille-martin'])
+  })
+
+  it('refuses a CV nobody owns to all but Business Developers and Directeurs d’agence', async () => {
+    expect(await editable('raphael-grand')).toBe(false)
+    const response = await put('raphael-grand', seedData['raphael-grand'])
+    expect(response.status).toBe(403)
+  })
+})
+
 describe('POST /api/cvs/:id/claim', () => {
   const claim = (id: string) => app.request(`/api/cvs/${id}/claim`, { method: 'POST' })
 
@@ -210,6 +278,8 @@ describe('POST /api/cvs/:id/claim', () => {
 })
 
 describe('DELETE /api/cvs/:id', () => {
+  beforeEach(ownCamilleCv)
+
   it('deletes the CV', async () => {
     const response = await app.request('/api/cvs/camille-martin', { method: 'DELETE' })
     expect(response.status).toBe(204)

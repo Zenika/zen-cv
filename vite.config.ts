@@ -23,7 +23,7 @@ function apiServer(): Plugin {
         if (current?.module !== module) {
           await current?.close()
           const { getRequestListener } = await import('@hono/node-server')
-          const { DATABASE_URL, DEV_USER_EMAIL } = loadEnv(
+          const { DATABASE_URL, DEV_USER_EMAIL, DEV_USER_TITLE } = loadEnv(
             server.config.mode,
             server.config.envDir || server.config.root,
             '',
@@ -31,6 +31,7 @@ function apiServer(): Plugin {
           const { app, close } = module.createServerApp({
             databaseUrl: DATABASE_URL,
             devUserEmail: DEV_USER_EMAIL,
+            devUserTitle: DEV_USER_TITLE,
             logoFile: zenikaLogoFile,
             baseUrl: () => server.resolvedUrls?.local[0] ?? 'http://localhost:5173/',
           })

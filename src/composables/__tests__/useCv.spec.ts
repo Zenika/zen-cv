@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 async function loaded() {
-  vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"' })
+  vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"', editable: true })
   const state = useCv('camille')
   await state.load()
   return state
@@ -34,6 +34,14 @@ describe('useCv', () => {
     expect(loadError.value).toBeNull()
   })
 
+  it('tells whether the CV can be edited', async () => {
+    expect((await loaded()).editable.value).toBe(true)
+    vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"', editable: false })
+    const { editable, load } = useCv('camille')
+    await load()
+    expect(editable.value).toBe(false)
+  })
+
   it('exposes the load error and clears it on retry', async () => {
     vi.mocked(getCv).mockRejectedValueOnce(new Error('le serveur est injoignable.'))
     const { cv: current, loadError, load } = useCv('camille')
@@ -41,7 +49,7 @@ describe('useCv', () => {
     expect(current.value).toBeNull()
     expect(loadError.value).toBe('le serveur est injoignable.')
 
-    vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"' })
+    vi.mocked(getCv).mockResolvedValue({ cv, version: '"1"', editable: true })
     await load()
     expect(current.value).toEqual(cv)
     expect(loadError.value).toBeNull()

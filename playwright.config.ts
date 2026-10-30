@@ -31,6 +31,7 @@ export default defineConfig({
       PORT: String(port),
       DATABASE_URL: e2eDatabaseUrl(TEST_DATABASE_URL),
       DEV_USER_EMAIL: 'jeanne.leroy@zenika.com',
+      DEV_USER_TITLE: 'Business Developer',
     },
   },
 })
