@@ -42,11 +42,15 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
       cv: edited,
       version: 2,
       ownerEmail: null,
+      sourceId: null,
+      label: null,
     })
     expect(await repository.get('raphael-grand')).toEqual({
       cv: seedData['raphael-grand'],
       version: 1,
       ownerEmail: null,
+      sourceId: null,
+      label: null,
     })
   })
 
@@ -71,6 +75,8 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
       cv: { ...cv, title: 'Nouveau' },
       version: 2,
       ownerEmail: null,
+      sourceId: null,
+      label: null,
     })
     expect(after[0].updated_at.getTime()).toBeGreaterThan(before[0].updated_at.getTime())
 
@@ -104,6 +110,8 @@ describe.skipIf(!databaseUrl)('postgres repository', () => {
       cv: imported,
       version: 1,
       ownerEmail: null,
+      sourceId: null,
+      label: null,
     })
   })
 
