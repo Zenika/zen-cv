@@ -153,7 +153,7 @@ test('creates a labelled version of a CV, kept off the printed CV', async ({ pag
 
   await page.emulateMedia({ media: 'print' })
   await expect(versions).toBeHidden()
-  await expect(page.getByText('Mission Banque')).toBeHidden()
+  await expect(page.getByText('Mission Banque').filter({ visible: true })).toHaveCount(0)
   await page.emulateMedia({ media: 'screen' })
 
   await page.goto('/')
